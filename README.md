@@ -2,18 +2,25 @@
 
 A mobile habit-tracker UI with three linked screens. It's design only; no data is saved.
 
-| Route          | Screen                                  | Reached from                                      |
-|----------------|-----------------------------------------|---------------------------------------------------|
-| `#home`        | Home / Today's habits (default)         | Tab bar                                           |
-| `#tracker`     | My Habits Tracker                       | Tab bar, garden "See insights"                    |
-| `#habits`      | Habit garden + habit cards              | Tab bar, Home grid icon                           |
-| `#habit/<id>`  | Habit detail (fill tank, log, heatmap)  | Any habit row or card, Tracker cards              |
-| `#new`         | New habit builder                       | `+` on Home or Habits, "New habit" card           |
-| `#settings`    | Profile, badges, buddy, preferences     | Tab bar                                           |
-| `#chat`        | Chat buddy                              | Home bubble or frog, buddy card, Help & feedback  |
+| Route          | Screen                                                     |
+|----------------|------------------------------------------------------------|
+| `#home`        | Today: water / sleep / exercise, progress, habit list      |
+| `#tracker`     | Streak, sleep chart, weekly score, last-7-days per habit   |
+| `#habits`      | Week strip, habit garden, time-of-day filters, habit cards |
+| `#habit/<id>`  | Fill tank, logging (litres for water), stats, heatmap      |
+| `#new`, `#edit/<id>` | Habit editor                                         |
+| `#settings`    | Profile & level, badges, buddy, preferences, data          |
+| `#chat`        | Local chat buddy with tips, schedule and progress          |
 
-State lives in memory and resets on reload. Checking a habit, logging units or planting a new
-habit updates every screen and plays a small confetti celebration.
+Everything is saved in the browser's localStorage (key `habie.v2`). The first launch seeds six
+weeks of demo history; **Settings → Your data → Start fresh** clears it, and **Export** downloads
+your data as JSON.
+
+What works: logging (tap the round button to add a step; water is tracked in litres), streaks,
+XP/levels and badges computed from your log, sleep logging, editing and deleting habits, search,
+the menu drawer, dark mode, four colour themes, synthesised sounds, focus mode (hides finished
+habits), share/invite (Web Share or clipboard) and reminders. Reminders use browser notifications
+and only fire while Habie is open — there is no server or service worker.
 
 Open `index.html` in a browser. On phones the app fills the screen; on wider windows it
 shows as a centred phone-width column.

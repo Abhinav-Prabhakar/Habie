@@ -8,7 +8,7 @@ import hashlib, json, pathlib, re
 root = pathlib.Path(__file__).resolve().parent.parent
 files = ['./', 'index.html', 'styles.css', 'config.js', 'manifest.webmanifest']
 files += sorted(str(p.relative_to(root)) for d in ('js', 'assets') for p in (root / d).rglob('*')
-                if p.is_file() and p.name != 'LICENSE' and 'splash' not in p.parts)
+                if p.is_file() and p.name != 'LICENSE' and not {'splash', 'screenshots'} & set(p.parts))
 digest = hashlib.sha1()
 for f in files[1:]:
     digest.update((root / f).read_bytes())

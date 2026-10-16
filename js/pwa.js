@@ -10,7 +10,9 @@ const standalone = () => matchMedia('(display-mode: standalone)').matches || nav
 const ios = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 export function installState() {
-  return { installed: standalone(), canPrompt: !!deferred, ios: ios() };
+  // README mock-ups (?mockup) show Habie as the installed Home Screen app.
+  const mock = document.documentElement.classList.contains('mockup');
+  return { installed: mock || standalone(), canPrompt: !!deferred, ios: ios() };
 }
 
 export async function promptInstall() {

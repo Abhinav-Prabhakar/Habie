@@ -16,8 +16,8 @@
     { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "screenshots": [
-    { "src": "docs/images/today.png", "sizes": "2360x1640", "type": "image/png", "form_factor": "wide", "label": "Today" },
-    { "src": "docs/images/habits.png", "sizes": "2360x1640", "type": "image/png", "form_factor": "wide", "label": "Habits" }
+    { "src": "assets/screenshots/today.png", "sizes": "2360x1640", "type": "image/png", "form_factor": "wide", "label": "Today" },
+    { "src": "assets/screenshots/habits.png", "sizes": "2360x1640", "type": "image/png", "form_factor": "wide", "label": "Habits" }
   ],
   "shortcuts": [
     { "name": "New habit", "url": "./#new", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] },

@@ -986,6 +986,7 @@ $('#sb-date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 's
 applyTheme();
 fit();
 renderAll();
+save();                                    // persist the seeded garden on first launch
 route();
 initPWA(() => { renderSidebar(); renderSettings(); });
 maybeOfferInstall();

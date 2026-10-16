@@ -240,12 +240,13 @@
     if (!el) return;
     const from = parseFloat(el.dataset.v || '0');
     el.dataset.v = to;
-    if (REDUCED || from === to) { el.textContent = to.toFixed(decimals).replace(/\.0+$/, '') + suffix; return; }
+    const fmt = (v) => String(decimals ? Math.round(v * 10 ** decimals) / 10 ** decimals : Math.round(v));
+    if (REDUCED || from === to) { el.textContent = fmt(to) + suffix; return; }
     const start = performance.now(), dur = 700;
     const step = (t) => {
       const p = Math.min(1, (t - start) / dur), e = 1 - Math.pow(1 - p, 3);
       const v = from + (to - from) * e;
-      el.textContent = (decimals ? (Math.round(v * 100) / 100).toFixed(decimals).replace(/\.?0+$/, '') : Math.round(v)) + suffix;
+      el.textContent = fmt(v) + suffix;
       if (p < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -863,23 +864,6 @@
     const b = buddy().name;
     const has = (...w) => w.some((x) => t.includes(x));
     if (img) return { from: 'bot', text: 'What a lovely photo! Capturing moments like this is a habit worth keeping. Want to log something for today?', actions: [{ label: 'Open today', href: '#home' }] };
-    if (t === 'tips' || has('tip', 'advice', 'help me', 'motivat', 'hard', 'struggl')) {
-      return { from: 'bot', text: TIPS[Math.floor(Math.random() * TIPS.length)], actions: [{ label: 'Another tip', say: 'tips' }, { label: 'My progress', say: 'progress' }] };
-    }
-    if (t === 'goals' || has('goal', 'new habit', 'set up', 'setup', 'start', 'add')) {
-      const idea = IDEAS[Math.floor(Math.random() * IDEAS.length)];
-      return { from: 'bot', text: `Let’s set one up! Pick something tiny you can do in two minutes. How about <b>${idea.name.toLowerCase()}</b>?`, actions: [{ label: 'Create a habit', href: '#new' }, { label: 'Another idea', say: 'goals' }] };
-    }
-    if (t === 'schedule' || has('schedule', 'plan', 'today', 'when')) {
-      const by = TIME_ORDER.map((tm) => [tm, list.filter((h) => h.time === tm)]).filter(([, l]) => l.length);
-      return { from: 'bot', text: by.length ? 'Here’s your day:' : 'Your day is wide open — no habits scheduled.', cards: by.map(([tm, l]) =>
-        `<div class="m-sched"><span><img src="${ICON(TIMES[tm].icon)}" alt="">${TIMES[tm].label}</span>${habitChips(l, k)}</div>`).join('') };
-    }
-    if (t === 'progress' || has('progress', 'how am i', 'doing', 'status', 'streak')) {
-      const st = streak();
-      return { from: 'bot', text: s.total ? `You’ve done <b>${s.done} of ${s.total}</b> today and your streak is <b>${st} day${st === 1 ? '' : 's'}</b>. ${pending.length ? 'Still to go:' : 'Everything’s done — perfect day!'}` : 'No habits yet. Shall we plant one?',
-        cards: pending.length ? habitChips(pending, k) : '', actions: pending.length ? [] : [{ label: 'See insights', href: '#tracker' }] };
-    }
     if (has('water', 'drink', 'hydrat', 'litre', 'liter')) {
       const w = habitById('water');
       if (w) { const v = val(w, k); return { from: 'bot', text: `You’ve had <b>${fmtNum(v)} L</b> of ${fmtNum(w.goal)} L today. ${v >= w.goal ? 'Fully hydrated!' : `Just ${fmtNum(w.goal - v)} L to go.`}`, actions: [{ label: 'Log water', href: '#habit/water' }] }; }
@@ -887,6 +871,23 @@
     if (has('sleep', 'tired', 'rest', 'bed')) {
       const sl = state.sleep[addDays(k, -1)];
       return { from: 'bot', text: sl ? `You slept <b>${fmtNum(sl)}h</b> last night. ${sl >= 7 ? 'Nicely rested!' : 'Try winding down a little earlier tonight.'}` : 'You haven’t logged last night’s sleep yet.', actions: [{ label: 'Log sleep', say: 'log-sleep' }] };
+    }
+    if (t === 'progress' || has('progress', 'how am i', 'doing', 'status', 'streak')) {
+      const st = streak();
+      return { from: 'bot', text: s.total ? `You’ve done <b>${s.done} of ${s.total}</b> today and your streak is <b>${st} day${st === 1 ? '' : 's'}</b>. ${pending.length ? 'Still to go:' : 'Everything’s done — perfect day!'}` : 'No habits yet. Shall we plant one?',
+        cards: pending.length ? habitChips(pending, k) : '', actions: pending.length ? [] : [{ label: 'See insights', href: '#tracker' }] };
+    }
+    if (t === 'tips' || has('tip', 'advice', 'help me', 'motivat', 'hard', 'struggl')) {
+      return { from: 'bot', text: TIPS[Math.floor(Math.random() * TIPS.length)], actions: [{ label: 'Another tip', say: 'tips' }, { label: 'My progress', say: 'progress' }] };
+    }
+    if (t === 'goals' || has('goal', 'new habit', 'set up', 'setup', 'add a habit', 'create')) {
+      const idea = IDEAS[Math.floor(Math.random() * IDEAS.length)];
+      return { from: 'bot', text: `Let’s set one up! Pick something tiny you can do in two minutes. How about <b>${idea.name.toLowerCase()}</b>?`, actions: [{ label: 'Create a habit', href: '#new' }, { label: 'Another idea', say: 'goals' }] };
+    }
+    if (t === 'schedule' || has('schedule', 'plan', 'agenda', 'what’s on', "what's on")) {
+      const by = TIME_ORDER.map((tm) => [tm, list.filter((h) => h.time === tm)]).filter(([, l]) => l.length);
+      return { from: 'bot', text: by.length ? 'Here’s your day:' : 'Your day is wide open — no habits scheduled.', cards: by.map(([tm, l]) =>
+        `<div class="m-sched"><span><img src="${ICON(TIMES[tm].icon)}" alt="">${TIMES[tm].label}</span>${habitChips(l, k)}</div>`).join('') };
     }
     if (has('thank', 'thx', 'love')) return { from: 'bot', text: 'Anytime! I’m always here cheering for you.' };
     if (has('hi', 'hello', 'hey', 'morning', 'evening')) return { from: 'bot', text: `Hey ${esc(state.name)}! I’m ${b}. Ask me for tips, your schedule, or how you’re doing.` };
@@ -1057,14 +1058,15 @@
     if ((t = el('[data-setting]'))) {
       const key = t.dataset.setting, on = !state.settings[key];
       if (key === 'reminders') { setReminders(on); return; }
-      if (key === 'dark') { themeTransition(t, () => { state.settings.dark = on; applyTheme(); }); }
-      else state.settings[key] = on;
-      save(); renderAll(); sound('pop'); return;
+      // The theme change runs inside the view transition callback, so render there too.
+      const apply = () => { state.settings[key] = on; if (key === 'dark') applyTheme(); save(); renderAll(); };
+      if (key === 'dark') themeTransition(t, apply); else apply();
+      sound('pop'); return;
     }
     if ((t = el('[data-accent-pick]'))) {
       const acc = t.dataset.accentPick;
-      themeTransition(t, () => { state.settings.accent = acc; applyTheme(); });
-      save(); renderSettings(); sound('pop'); return;
+      themeTransition(t, () => { state.settings.accent = acc; applyTheme(); save(); renderAll(); });
+      sound('pop'); return;
     }
     if ((t = el('[data-buddy]'))) {
       state.buddy = t.dataset.buddy; save(); renderAll(); renderChat(false);

@@ -116,6 +116,11 @@ img { display: block; user-select: none; -webkit-user-drag: none; }
 .blob.b2 { right: -40px; top: 140px; width: 200px; height: 200px; background: color-mix(in srgb, var(--a-soft) 70%, #fff); animation-duration: 18s; animation-direction: reverse; }
 .blob.b3 { left: 180px; top: 300px; width: 160px; height: 160px; background: var(--hsun); animation-duration: 11s; }
 :root[data-mode="dark"] .blob { opacity: .22; }
+:root[data-mode="dark"] .hero-bg {
+  background:
+    radial-gradient(70% 55% at 0% 0%, color-mix(in srgb, var(--hglow) 55%, transparent) 0%, transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--h1) 72%, var(--page)) 0%, color-mix(in srgb, var(--h2) 48%, var(--page)) 28%, color-mix(in srgb, var(--h3) 22%, var(--page)) 55%, var(--page) 88%);
+}
 
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 60px; min-height: 118px; }
 .topbar-left { display: flex; align-items: center; gap: 21px; }
@@ -820,9 +825,9 @@ a.grid-ic:hover i { background: var(--a-soft); }
 .drawer {
   position: absolute; left: 0; top: 0; bottom: 0; z-index: 21; width: 400px; padding: 70px 26px 40px; border-radius: 0 44px 44px 0;
   background: var(--surface); box-shadow: 30px 0 60px -30px rgba(0,0,0,.4); display: flex; flex-direction: column;
-  transform: translateX(-105%); transition: transform .5s cubic-bezier(.2,.9,.2,1);
+  transform: translateX(-110%); visibility: hidden; transition: transform .5s cubic-bezier(.2,.9,.2,1), visibility 0s .5s;
 }
-.drawer.open { transform: none; }
+.drawer.open { transform: none; visibility: visible; transition: transform .5s cubic-bezier(.2,.9,.2,1), visibility 0s; }
 .drawer-head { display: flex; align-items: center; gap: 16px; padding-bottom: 26px; border-bottom: 1.5px solid var(--line); }
 .drawer-ava { width: 76px; height: 76px; border-radius: 50%; background: color-mix(in srgb, var(--a-soft) 30%, var(--surface)); display: grid; place-items: center; overflow: hidden; }
 .drawer-ava img { width: 54px; margin-top: 8px; }
@@ -841,8 +846,8 @@ a.grid-ic:hover i { background: var(--a-soft); }
 .drawer-quote img { width: 34px; }
 .drawer-quote p { margin-top: 8px; font-weight: 700; font-size: 18px; line-height: 25px; }
 
-.search { position: absolute; left: 0; right: 0; top: 0; z-index: 22; max-height: 80%; overflow: auto; padding: 56px 24px 24px; border-radius: 0 0 40px 40px; background: var(--surface); box-shadow: var(--shadow-lg); transform: translateY(-105%); transition: transform .45s cubic-bezier(.2,.9,.2,1); }
-.search.open { transform: none; }
+.search { position: absolute; left: 0; right: 0; top: 0; z-index: 22; max-height: 80%; overflow: auto; padding: 56px 24px 24px; border-radius: 0 0 40px 40px; background: var(--surface); box-shadow: var(--shadow-lg); transform: translateY(-110%); visibility: hidden; transition: transform .45s cubic-bezier(.2,.9,.2,1), visibility 0s .45s; }
+.search.open { transform: none; visibility: visible; transition: transform .45s cubic-bezier(.2,.9,.2,1), visibility 0s; }
 .search-bar { display: flex; align-items: center; gap: 12px; height: 64px; padding: 0 8px 0 20px; border-radius: 32px; background: var(--surface-2); color: var(--muted); }
 .search-bar input { flex: 1; border: 0; outline: 0; background: none; font-family: "Roboto"; font-size: 19px; color: var(--ink); }
 .search-cancel { height: 48px; padding: 0 16px; border-radius: 24px; font-weight: 700; font-size: 16px; color: var(--a-ink); }
@@ -863,9 +868,9 @@ a.grid-ic:hover i { background: var(--a-soft); }
 .sheet {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 22; max-height: 88%; overflow: auto; padding: 14px 28px 54px;
   border-radius: 40px 40px 0 0; background: var(--surface); box-shadow: 0 -20px 60px -20px rgba(0,0,0,.3);
-  transform: translateY(105%); transition: transform .5s cubic-bezier(.2,.9,.25,1.04);
+  transform: translateY(calc(100% + 60px)); visibility: hidden; transition: transform .5s cubic-bezier(.2,.9,.25,1.04), visibility 0s .5s;
 }
-.sheet.open { transform: none; }
+.sheet.open { transform: none; visibility: visible; transition: transform .5s cubic-bezier(.2,.9,.25,1.04), visibility 0s; }
 .grabber { display: block; width: 56px; height: 6px; margin: 0 auto 18px; border-radius: 3px; background: var(--ring-off); }
 .sh-hero { position: relative; height: 140px; display: grid; place-items: center; }
 .sh-big { width: 110px; animation: bob 3s ease-in-out infinite; }

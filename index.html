@@ -94,12 +94,9 @@
 
       <div class="progress-card">
         <div class="pc-title">Today’s progress</div>
-        <div class="pc-bar">
-          <span class="seg on"><i></i></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span>
-          <b>3/5</b>
-        </div>
+        <div class="pc-bar" id="pc-bar"></div>
         <div class="pc-line"></div>
-        <div class="pc-chips"><span>2 habits left</span><span><em>Next:</em> Move 20 mins</span></div>
+        <div class="pc-chips"><span id="pc-left"></span><span id="pc-next"></span></div>
       </div>
       <div class="pc-art">
         <img class="pc-bear" src="assets/3d/bear-purple.png" alt="">
@@ -110,34 +107,14 @@
 
       <div class="sec-head">
         <h3>Today’s Habits</h3>
-        <span class="grid-ic"><i></i><i></i><i></i><i></i></span>
-        <span class="plus-ic"><svg width="14" height="14" viewBox="0 0 14 14" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M7 1.5v11M1.5 7h11"/></svg></span>
+        <a class="grid-ic" href="#habits" aria-label="All habits"><i></i><i></i><i></i><i></i></a>
+        <a class="plus-ic" href="#new" aria-label="New habit"><svg width="14" height="14" viewBox="0 0 14 14" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M7 1.5v11M1.5 7h11"/></svg></a>
       </div>
 
-      <div class="habit h1">
-        <span class="h-ic"><img src="assets/3d/droplet.png" alt=""></span>
-        <span class="h-t">Drink Water</span><span class="h-s">Every 30 minutes</span>
-        <span class="h-check done"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 9.3 3.3 3.2L14 5.8"/></svg></span>
-      </div>
-      <div class="habit h2">
-        <span class="h-ic"><img src="assets/3d/biceps.png" alt=""></span>
-        <span class="h-t">Workout</span><span class="h-s">For 30 minutes</span>
-        <span class="h-check"></span>
-      </div>
-      <div class="habit h3">
-        <span class="h-ic"><img src="assets/3d/memo.png" alt=""></span>
-        <span class="h-t">Write Journal</span><span class="h-s">End of the day</span>
-        <span class="h-check"></span>
-      </div>
+      <div class="home-habits" id="home-habits"></div>
     </div></div>
 
     <div class="fade-bottom"></div>
-    <nav class="tabbar" aria-label="Main">
-      <a class="tab active" href="#home" aria-current="page"><svg width="30" height="30" viewBox="0 0 30 30"><path d="M3.5 13.2c0-1.1.5-2.1 1.3-2.8l8-6.6a3.4 3.4 0 0 1 4.4 0l8 6.6c.8.7 1.3 1.7 1.3 2.8v11.3c0 1.7-1.3 3-3 3h-17c-1.7 0-3-1.3-3-3z" fill="#1b1b1f"/><rect x="11.5" y="21" width="7" height="2.2" rx="1.1" fill="#fff"/></svg>Home</a>
-      <a class="tab" href="#tracker"><svg width="30" height="30" viewBox="0 0 30 30"><rect x="3" y="3" width="24" height="24" rx="6" fill="#5d5d66"/><rect x="8.5" y="15" width="3.2" height="7" rx="1.2" fill="#fff"/><rect x="13.4" y="11.5" width="3.2" height="10.5" rx="1.2" fill="#fff"/><rect x="18.3" y="8" width="3.2" height="14" rx="1.2" fill="#fff"/></svg>Tracker</a>
-      <a class="tab" aria-disabled="true"><svg width="32" height="30" viewBox="0 0 32 30" fill="none" stroke="#5d5d66" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 2.2 2.2L9.5 4M3 15l2.2 2.2L9.5 13M3 24l2.2 2.2L9.5 22M14 6.5h15M14 15.5h15M14 24.5h15"/></svg>Habits</a>
-      <a class="tab" aria-disabled="true"><svg width="30" height="30" viewBox="0 0 30 30"><path fill="#5d5d66" fill-rule="evenodd" d="M12.6 2.5h4.8l.8 3.3 1.9.9 2.9-1.8 3.4 3.4-1.8 2.9.8 1.9 3.3.8v4.8l-3.3.8-.8 1.9 1.8 2.9-3.4 3.4-2.9-1.8-1.9.8-.8 3.3h-4.8l-.8-3.3-1.9-.8-2.9 1.8-3.4-3.4 1.8-2.9-.8-1.9-3.3-.8v-4.8l3.3-.8.8-1.9-1.8-2.9 3.4-3.4 2.9 1.8 1.9-.9zM15 10.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2z"/></svg>Settings</a>
-    </nav>
   </section>
 
   <!-- ===== Tracker ===== -->
@@ -167,7 +144,7 @@
           <span class="dot big"><svg width="16" height="16" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m2.6 6.2 2.2 2.1 4.6-4.6"/></svg></span>
           <span class="num">20</span><span class="num">21</span><span class="num">22</span>
         </div>
-        <div class="sk-foot">4 / 6 Habits completed today</div>
+        <div class="sk-foot" id="sk-foot"></div>
       </div>
 
       <div class="mini sleep">
@@ -186,28 +163,257 @@
         <div class="mini-s">3 Hours Today</div>
       </div>
 
-      <div class="wcard water">
+      <a class="wcard water" href="#habit/water">
         <span class="w-ic"><img src="assets/3d/droplet.png" alt=""></span>
-        <span class="w-t">Drink Water</span><span class="w-q">Poor</span>
-        <div class="w-segs"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
-        <span class="w-badge">3/8</span>
-      </div>
-      <div class="wcard workout2">
+        <span class="w-t">Drink Water</span><span class="w-q" id="tr-water-q"></span>
+        <div class="w-segs" id="tr-water-segs"></div>
+        <span class="w-badge" id="tr-water-badge"></span>
+      </a>
+      <a class="wcard workout2" href="#habit/workout">
         <span class="w-ic"><img src="assets/3d/biceps.png" alt=""></span>
         <span class="w-t">Workout</span><span class="w-q">Good</span>
         <div class="w-segs green"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
         <span class="w-badge green">6/8</span>
-      </div>
+      </a>
     </div></div>
 
     <div class="fade-bottom"></div>
-    <nav class="tabbar" aria-label="Main">
-      <a class="tab" href="#home"><svg width="30" height="30" viewBox="0 0 30 30"><path d="M3.5 13.2c0-1.1.5-2.1 1.3-2.8l8-6.6a3.4 3.4 0 0 1 4.4 0l8 6.6c.8.7 1.3 1.7 1.3 2.8v11.3c0 1.7-1.3 3-3 3h-17c-1.7 0-3-1.3-3-3z" fill="#5d5d66"/><rect x="11.5" y="21" width="7" height="2.2" rx="1.1" fill="#fff"/></svg>Home</a>
-      <a class="tab active" href="#tracker" aria-current="page"><svg width="30" height="30" viewBox="0 0 30 30"><rect x="3" y="3" width="24" height="24" rx="6" fill="#1b1b1f"/><rect x="8.5" y="15" width="3.2" height="7" rx="1.2" fill="#fff"/><rect x="13.4" y="11.5" width="3.2" height="10.5" rx="1.2" fill="#fff"/><rect x="18.3" y="8" width="3.2" height="14" rx="1.2" fill="#fff"/></svg>Tracker</a>
-      <a class="tab" aria-disabled="true"><svg width="32" height="30" viewBox="0 0 32 30" fill="none" stroke="#5d5d66" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 2.2 2.2L9.5 4M3 15l2.2 2.2L9.5 13M3 24l2.2 2.2L9.5 22M14 6.5h15M14 15.5h15M14 24.5h15"/></svg>Habits</a>
-      <a class="tab" aria-disabled="true"><svg width="30" height="30" viewBox="0 0 30 30"><path fill="#5d5d66" fill-rule="evenodd" d="M12.6 2.5h4.8l.8 3.3 1.9.9 2.9-1.8 3.4 3.4-1.8 2.9.8 1.9 3.3.8v4.8l-3.3.8-.8 1.9 1.8 2.9-3.4 3.4-2.9-1.8-1.9.8-.8 3.3h-4.8l-.8-3.3-1.9-.8-2.9 1.8-3.4-3.4 1.8-2.9-.8-1.9-3.3-.8v-4.8l3.3-.8.8-1.9-1.8-2.9 3.4-3.4 2.9 1.8 1.9-.9zM15 10.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2z"/></svg>Settings</a>
-    </nav>
   </section>
+
+  <!-- ===== Habits (garden) ===== -->
+  <section class="screen screen-habits" data-route="habits" aria-label="Habits">
+    <div class="scroll"><div class="content flow">
+      <div class="grad-header"></div>
+      <header class="topbar">
+        <div><h2 class="top-title">My Habits</h2><p class="top-sub">Wednesday, 19 March</p></div>
+        <a class="glass-btn round" href="#new" aria-label="New habit"><svg width="22" height="22" viewBox="0 0 22 22" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M11 3v16M3 11h16"/></svg></a>
+      </header>
+
+      <div class="week-strip">
+        <button class="wday done"><span>Sun</span><b>16</b><i></i></button>
+        <button class="wday done"><span>Mon</span><b>17</b><i></i></button>
+        <button class="wday done"><span>Tue</span><b>18</b><i></i></button>
+        <button class="wday today sel"><span>Wed</span><b>19</b></button>
+        <button class="wday"><span>Thu</span><b>20</b></button>
+        <button class="wday"><span>Fri</span><b>21</b></button>
+        <button class="wday"><span>Sat</span><b>22</b></button>
+      </div>
+
+      <div class="card garden">
+        <div class="garden-ring-wrap">
+          <span class="garden-glow"></span>
+          <svg id="garden-ring" viewBox="0 0 300 300" width="300" height="300" aria-hidden="true"></svg>
+          <div id="garden-orbit" class="garden-orbit"></div>
+          <img id="garden-plant" class="garden-plant" src="assets/3d/potted-plant.png" alt="Your habit garden">
+        </div>
+        <div class="garden-info">
+          <span class="garden-label"><img src="assets/3d/sparkles.png" alt="">Habit garden</span>
+          <div class="garden-count" id="garden-count"></div>
+          <p class="garden-msg" id="garden-msg"></p>
+          <a class="garden-link" href="#tracker">See insights <svg width="8" height="12" viewBox="0 0 8 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 2 4 4-4 4"/></svg></a>
+        </div>
+      </div>
+
+      <div class="filters">
+        <button class="filter on" data-filter="all"><img src="assets/3d/sparkles.png" alt="">All</button>
+        <button class="filter" data-filter="morning"><img src="assets/3d/sunrise.png" alt="">Morning</button>
+        <button class="filter" data-filter="afternoon"><img src="assets/3d/sun.png" alt="">Afternoon</button>
+        <button class="filter" data-filter="evening"><img src="assets/3d/crescent-moon.png" alt="">Evening</button>
+      </div>
+
+      <div class="habit-grid" id="habit-grid"></div>
+    </div></div>
+    <div class="fade-bottom"></div>
+  </section>
+
+  <!-- ===== Habit detail ===== -->
+  <section class="screen screen-habit" data-route="habit" aria-label="Habit details">
+    <div class="scroll"><div class="content flow detail">
+      <div class="d-header"><span class="d-bubble b1"></span><span class="d-bubble b2"></span><span class="d-bubble b3"></span></div>
+      <header class="topbar">
+        <a class="glass-btn round" href="#habits" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></a>
+        <button class="glass-btn round" aria-label="More"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><circle cx="5" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="19" cy="12" r="2.2"/></svg></button>
+      </header>
+
+      <div class="tank">
+        <div class="tank-wave" id="d-wave"><span class="wave w1"></span><span class="wave w2"></span></div>
+        <span class="rise r1"></span><span class="rise r2"></span><span class="rise r3"></span>
+        <img class="tank-icon" id="d-icon" src="assets/3d/droplet.png" alt="">
+        <span class="tank-pct" id="d-pct"></span>
+      </div>
+      <h1 class="d-name" id="d-name"></h1>
+      <div class="d-meta"><span class="pill" id="d-time"></span><span class="pill" id="d-note"></span></div>
+
+      <div class="card d-today">
+        <div class="card-head"><h3>Today</h3><span id="d-count"></span></div>
+        <div class="units" id="d-units"></div>
+        <button class="d-log" id="d-log"></button>
+      </div>
+
+      <div class="d-stats">
+        <div class="stat-tile"><img src="assets/3d/fire.png" alt=""><b id="d-streak"></b><span>day streak</span></div>
+        <div class="stat-tile"><img src="assets/3d/trophy.png" alt=""><b id="d-best"></b><span>best streak</span></div>
+        <div class="stat-tile"><img src="assets/3d/chart-increasing.png" alt=""><b id="d-rate"></b><span>this month</span></div>
+      </div>
+
+      <div class="card d-heat-card">
+        <div class="card-head"><h3>March</h3><span class="legend">Less<i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i>More</span></div>
+        <div class="heat-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+        <div class="heat" id="d-heat"></div>
+      </div>
+
+      <a class="buddy-card" href="#chat">
+        <p>You're great! Keep going, you're almost there!</p>
+        <span class="buddy-btn"><img src="assets/3d/speech-balloon.png" alt="">Chat with Nino</span>
+        <img class="buddy-cloud" src="assets/3d/cloud.png" alt="">
+        <img class="buddy-pet" src="assets/3d/fox.png" alt="">
+      </a>
+    </div></div>
+  </section>
+
+  <!-- ===== New habit ===== -->
+  <section class="screen screen-new" data-route="new" aria-label="New habit">
+    <div class="scroll"><div class="content flow">
+      <div class="soft-header"></div>
+      <header class="topbar">
+        <a class="glass-btn round light" href="#habits" aria-label="Close"><svg width="20" height="20" viewBox="0 0 20 20" stroke="#3b3a55" stroke-width="2.4" stroke-linecap="round"><path d="M4 4l12 12M16 4 4 16"/></svg></a>
+        <h2 class="top-title dark">New Habit</h2>
+        <span class="topbar-spacer"></span>
+      </header>
+
+      <div class="card n-preview">
+        <span class="n-blob"><img id="n-preview-icon" src="assets/3d/running-shoe.png" alt=""></span>
+        <div class="n-preview-text">
+          <input id="n-name" class="n-name" value="Morning run" maxlength="22" aria-label="Habit name">
+          <p class="n-meta" id="n-preview-meta"></p>
+        </div>
+        <svg class="n-edit" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a0a0aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>
+      </div>
+
+      <h3 class="sec">Pick an icon</h3>
+      <div class="n-icons" id="n-icons"></div>
+
+      <h3 class="sec">Colour</h3>
+      <div class="n-colors" id="n-colors"></div>
+
+      <h3 class="sec">Time of day</h3>
+      <div class="n-times" id="n-times">
+        <button class="time-opt" data-time="morning"><img src="assets/3d/sunrise.png" alt=""><span>Morning</span></button>
+        <button class="time-opt" data-time="afternoon"><img src="assets/3d/sun.png" alt=""><span>Afternoon</span></button>
+        <button class="time-opt" data-time="evening"><img src="assets/3d/crescent-moon.png" alt=""><span>Evening</span></button>
+      </div>
+
+      <h3 class="sec">Repeat</h3>
+      <div class="n-days" id="n-days">
+        <button class="day">M</button><button class="day">T</button><button class="day">W</button><button class="day">T</button><button class="day">F</button><button class="day">S</button><button class="day">S</button>
+      </div>
+
+      <h3 class="sec">Daily goal</h3>
+      <div class="card n-goal">
+        <button class="step" data-step="-1" aria-label="Fewer"><svg width="20" height="20" viewBox="0 0 20 20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 10h12"/></svg></button>
+        <div class="goal-mid"><b id="n-goal"></b><span class="goal-pips" id="n-goal-pips"></span></div>
+        <button class="step" data-step="1" aria-label="More"><svg width="20" height="20" viewBox="0 0 20 20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg></button>
+      </div>
+
+      <div class="card n-remind">
+        <span class="n-remind-ic"><img src="assets/3d/alarm-clock.png" alt=""></span>
+        <div><b>Reminder</b><span>08:00 AM · on repeat days</span></div>
+        <button class="switch" aria-pressed="true" aria-label="Reminder"></button>
+      </div>
+    </div></div>
+    <div class="fade-bottom"></div>
+    <button class="cta" id="n-create"><img src="assets/3d/seedling.png" alt="">Plant this habit</button>
+  </section>
+
+  <!-- ===== Settings ===== -->
+  <section class="screen screen-settings" data-route="settings" aria-label="Settings">
+    <div class="scroll"><div class="content flow">
+      <div class="grad-header"></div>
+      <header class="topbar">
+        <h2 class="top-title">Settings</h2>
+        <button class="glass-btn round" aria-label="Share profile"><svg width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="#fff" stroke-width="2"><circle cx="19" cy="5.5" r="3"/><circle cx="6.5" cy="13" r="3"/><circle cx="19" cy="20.5" r="3"/><path d="m9.2 11.5 7.1-4.4M9.2 14.5l7.1 4.4"/></svg></button>
+      </header>
+
+      <div class="card profile">
+        <div class="avatar">
+          <svg class="avatar-ring" width="132" height="132" viewBox="0 0 132 132"><circle cx="66" cy="66" r="60" fill="none" stroke="#eeeef8" stroke-width="7"/><circle cx="66" cy="66" r="60" fill="none" stroke="url(#xpG)" stroke-width="7" stroke-linecap="round" stroke-dasharray="271 377" transform="rotate(-90 66 66)"/><defs><linearGradient id="xpG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8f8fec"/><stop offset="1" stop-color="#4c55c6"/></linearGradient></defs></svg>
+          <span class="avatar-bg"><img src="assets/3d/man.png" alt="Lukman"></span>
+          <span class="lvl">Lv 7</span>
+        </div>
+        <div class="p-info">
+          <h3>Lukman</h3>
+          <p class="p-title"><img src="assets/3d/crown.png" alt="">Habit Hero</p>
+          <div class="xp"><i></i></div>
+          <span class="xp-l"><img src="assets/3d/glowing-star.png" alt="">720 / 1000 XP to Lv 8</span>
+        </div>
+        <div class="p-stats">
+          <div><img src="assets/3d/fire.png" alt=""><b>12</b><span>Day streak</span></div>
+          <div><img src="assets/3d/check-mark-button.png" alt=""><b>248</b><span>Habits done</span></div>
+          <div><img src="assets/3d/trophy.png" alt=""><b>9</b><span>Badges</span></div>
+        </div>
+      </div>
+
+      <div class="sec-row"><h3 class="sec">Badges</h3><span class="see">5 of 8 unlocked</span></div>
+      <div class="badges">
+        <div class="badge" style="--b1:#fff3d6;--b2:#ffe2a8"><img src="assets/3d/1st-place-medal.png" alt=""><b>Early Bird</b><span>7 mornings</span></div>
+        <div class="badge" style="--b1:#ffe8dc;--b2:#ffc9ad"><img src="assets/3d/fire.png" alt=""><b>On Fire</b><span>10-day streak</span></div>
+        <div class="badge" style="--b1:#dff4ff;--b2:#b9e6ff"><img src="assets/3d/droplet.png" alt=""><b>Hydrated</b><span>50 glasses</span></div>
+        <div class="badge" style="--b1:#ebe8ff;--b2:#d3cdff"><img src="assets/3d/rocket.png" alt=""><b>Lift-off</b><span>First week</span></div>
+        <div class="badge" style="--b1:#e2f7ff;--b2:#c5ecfb"><img src="assets/3d/gem-stone.png" alt=""><b>Diamond</b><span>30 days</span></div>
+        <div class="badge locked"><img src="assets/3d/trophy.png" alt=""><b>Champion</b><span>100 days</span><i class="lock"><img src="assets/3d/locked.png" alt=""></i></div>
+        <div class="badge locked"><img src="assets/3d/crown.png" alt=""><b>Royalty</b><span>Level 10</span><i class="lock"><img src="assets/3d/locked.png" alt=""></i></div>
+        <div class="badge locked"><img src="assets/3d/rainbow.png" alt=""><b>All-rounder</b><span>Perfect week</span><i class="lock"><img src="assets/3d/locked.png" alt=""></i></div>
+      </div>
+
+      <div class="sec-row"><h3 class="sec">Your buddy</h3><span class="see buddy-name" id="buddy-name">Nino</span></div>
+      <div class="buddies">
+        <button class="buddy on" data-buddy="bear-orange" data-name="Nino" style="--bb:#ffe7d4"><img src="assets/3d/bear-orange.png" alt="Nino"></button>
+        <button class="buddy" data-buddy="frog" data-name="Ribbit" style="--bb:#dcf5e3"><img src="assets/3d/frog.png" alt="Ribbit"></button>
+        <button class="buddy" data-buddy="fox" data-name="Foxy" style="--bb:#ffe6d6"><img src="assets/3d/fox.png" alt="Foxy"></button>
+        <button class="buddy" data-buddy="panda" data-name="Bamboo" style="--bb:#eceef3"><img src="assets/3d/panda.png" alt="Bamboo"></button>
+        <button class="buddy" data-buddy="penguin" data-name="Pip" style="--bb:#e1ecfb"><img src="assets/3d/penguin.png" alt="Pip"></button>
+        <button class="buddy" data-buddy="owl" data-name="Hoot" style="--bb:#f3e8dc"><img src="assets/3d/owl.png" alt="Hoot"></button>
+        <button class="buddy" data-buddy="unicorn" data-name="Sparkle" style="--bb:#f5e6ff"><img src="assets/3d/unicorn.png" alt="Sparkle"></button>
+      </div>
+
+      <h3 class="sec">Preferences</h3>
+      <div class="prefs">
+        <div class="pref"><span class="pref-ic" style="background:#fff0e2"><img src="assets/3d/alarm-clock.png" alt=""></span><b>Reminders</b><span>6 active</span><button class="switch" aria-pressed="true" aria-label="Reminders"></button></div>
+        <div class="pref"><span class="pref-ic" style="background:#e2f6fe"><img src="assets/3d/speaker-high-volume.png" alt=""></span><b>Sounds</b><span>Cheerful</span><button class="switch" aria-pressed="true" aria-label="Sounds"></button></div>
+        <div class="pref"><span class="pref-ic" style="background:#ebe8ff"><img src="assets/3d/crescent-moon.png" alt=""></span><b>Dark mode</b><span>Off</span><button class="switch" aria-pressed="false" aria-label="Dark mode"></button></div>
+        <div class="pref"><span class="pref-ic" style="background:#fff7d9"><img src="assets/3d/high-voltage.png" alt=""></span><b>Focus mode</b><span>Hide extras</span><button class="switch" aria-pressed="false" aria-label="Focus mode"></button></div>
+        <div class="pref wide">
+          <span class="pref-ic" style="background:#ffe9f1"><img src="assets/3d/artist-palette.png" alt=""></span><b>Theme</b><span>Lavender</span>
+          <div class="theme-sw">
+            <button class="on" data-theme-swatch style="--sw:linear-gradient(135deg,#8f8fec,#4c55c6)" aria-label="Lavender"></button>
+            <button data-theme-swatch style="--sw:linear-gradient(135deg,#ffb37a,#fc6f3c)" aria-label="Peach"></button>
+            <button data-theme-swatch style="--sw:linear-gradient(135deg,#7fe0a8,#22ae63)" aria-label="Mint"></button>
+            <button data-theme-swatch style="--sw:linear-gradient(135deg,#ff9cc0,#f0679b)" aria-label="Rose"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card list">
+        <a class="row"><span class="pref-ic" style="background:#e2f6fe"><img src="assets/3d/globe-showing-europe-africa.png" alt=""></span><b>Language</b><span class="row-v">English</span><svg width="9" height="14" viewBox="0 0 10 16" fill="none" stroke="#b0b0b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 2.5 5 5.5-5 5.5"/></svg></a>
+        <a class="row"><span class="pref-ic" style="background:#e3f7eb"><img src="assets/3d/shield.png" alt=""></span><b>Privacy &amp; data</b><span class="row-v"></span><svg width="9" height="14" viewBox="0 0 10 16" fill="none" stroke="#b0b0b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 2.5 5 5.5-5 5.5"/></svg></a>
+        <a class="row"><span class="pref-ic" style="background:#ffe9f1"><img src="assets/3d/wrapped-gift.png" alt=""></span><b>Invite friends</b><span class="row-v tag">Get 1 month free</span><svg width="9" height="14" viewBox="0 0 10 16" fill="none" stroke="#b0b0b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 2.5 5 5.5-5 5.5"/></svg></a>
+        <a class="row" href="#chat"><span class="pref-ic" style="background:#fff0e2"><img src="assets/3d/speech-balloon.png" alt=""></span><b>Help &amp; feedback</b><span class="row-v"></span><svg width="9" height="14" viewBox="0 0 10 16" fill="none" stroke="#b0b0b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 2.5 5 5.5-5 5.5"/></svg></a>
+      </div>
+      <p class="foot"><img src="assets/3d/seedling.png" alt="">Habie 1.0 · one small habit at a time</p>
+    </div></div>
+    <div class="fade-bottom"></div>
+  </section>
+
+  <!-- ===== Shared chrome ===== -->
+  <nav class="tabbar" aria-label="Main">
+    <span class="tab-ind" aria-hidden="true"></span>
+    <a class="tab" href="#home"><svg width="30" height="30" viewBox="0 0 30 30"><path d="M3.5 13.2c0-1.1.5-2.1 1.3-2.8l8-6.6a3.4 3.4 0 0 1 4.4 0l8 6.6c.8.7 1.3 1.7 1.3 2.8v11.3c0 1.7-1.3 3-3 3h-17c-1.7 0-3-1.3-3-3z" fill="currentColor"/><rect x="11.5" y="21" width="7" height="2.2" rx="1.1" fill="#fff"/></svg>Home</a>
+    <a class="tab" href="#tracker"><svg width="30" height="30" viewBox="0 0 30 30"><rect x="3" y="3" width="24" height="24" rx="6" fill="currentColor"/><rect x="8.5" y="15" width="3.2" height="7" rx="1.2" fill="#fff"/><rect x="13.4" y="11.5" width="3.2" height="10.5" rx="1.2" fill="#fff"/><rect x="18.3" y="8" width="3.2" height="14" rx="1.2" fill="#fff"/></svg>Tracker</a>
+    <a class="tab" href="#habits"><svg width="32" height="30" viewBox="0 0 32 30" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 2.2 2.2L9.5 4M3 15l2.2 2.2L9.5 13M3 24l2.2 2.2L9.5 22M14 6.5h15M14 15.5h15M14 24.5h15"/></svg>Habits</a>
+    <a class="tab" href="#settings"><svg width="30" height="30" viewBox="0 0 30 30"><path fill="currentColor" fill-rule="evenodd" d="M12.6 2.5h4.8l.8 3.3 1.9.9 2.9-1.8 3.4 3.4-1.8 2.9.8 1.9 3.3.8v4.8l-3.3.8-.8 1.9 1.8 2.9-3.4 3.4-2.9-1.8-1.9.8-.8 3.3h-4.8l-.8-3.3-1.9-.8-2.9 1.8-3.4-3.4 1.8-2.9-.8-1.9-3.3-.8v-4.8l3.3-.8.8-1.9-1.8-2.9 3.4-3.4 2.9 1.8 1.9-.9zM15 10.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2z"/></svg>Settings</a>
+  </nav>
+  <div class="fx" aria-hidden="true"></div>
+  <div class="toast" role="status"><img src="assets/3d/party-popper.png" alt=""><span class="toast-text"></span></div>
 
 </div>
 </div>

@@ -1,11 +1,19 @@
 # Habie
 
-Static HTML/CSS recreation of the Habie habit-tracker mockup: three phone screens
-(chat buddy, home, tracker) on a 2000×1500 artboard. Design only, no functionality.
+A mobile habit-tracker UI with three linked screens. It's design only; no data is saved.
 
-Open `index.html` in a browser. The artboard scales to fit the window;
-add `?raw` to the URL to render it at 1:1 for pixel comparison.
+| Route      | Screen                         | Reached from                                      |
+|------------|--------------------------------|---------------------------------------------------|
+| `#home`    | Home / Today's habits (default)| Tracker tab bar, chat back button                 |
+| `#tracker` | My Habits Tracker              | Home tab bar                                      |
+| `#chat`    | Chat buddy                     | Home: "Let's start small!" bubble or the frog     |
 
-- `styles.css` – all styling
-- `assets/` – mascot illustrations and small icons, cut from the reference shots
-- `reference/` – the original mockups (`mockup.webp`, `components.webp`) and the latest 1:1 render (`render.png`) for overlay comparison
+Open `index.html` in a browser. On phones the app fills the screen; on wider windows it
+shows as a centred phone-width column. Habits and Settings in the tab bar have no screens yet.
+
+- `index.html` – markup for all three screens
+- `styles.css` – styling (authored on a 541px-wide design canvas)
+- `app.js` – scales the canvas to the window and handles hash routing
+- `assets/3d/` – 3D illustrations from [Microsoft Fluent Emoji](https://github.com/microsoft/fluentui-emoji)
+  (MIT licence, see `assets/3d/LICENSE`); some are recoloured to match the palette
+- `reference/` – the original mockups

@@ -1,7 +1,7 @@
 // Habie — the iPad app: rendering, routing and interaction.
 import {
   store, save, ICON, TIMES, TIME_ORDER, COLORS, ACCENTS, BUDDIES, NEW_ICONS, IDEAS, QUOTES, LEVEL_XP, BADGES,
-  keyOf, dateOf, addDays, todayKey, monIndex, fmtDay, nowHHMM, fmtNum, freshState,
+  keyOf, dateOf, addDays, todayKey, monIndex, fmtDay, nowHHMM, fmtNum, blankState,
   habitById, val, isDone, scheduled, habitsOn, dayStats, perfect, color, buddy, stepOf, setVal,
   streak, bestStreak, habitStreak, habitBest, habitRate, totals, unlocked, progressText,
 } from './store.js';
@@ -64,7 +64,7 @@ function renderSidebar() {
   const left = s.total - s.done, nb = $('#nb-home');
   nb.textContent = s.total ? (left ? left : '✓') : '';
   nb.classList.toggle('done', s.total > 0 && !left);
-  $('#side-name').textContent = S().name;
+  $('#side-name').textContent = S().name || 'You';
   $('#side-level').textContent = `Level ${tt.level} · ${tt.xp} XP`;
   const inst = installState();
   $('#install-btn').hidden = inst.installed;
@@ -79,7 +79,7 @@ function renderHome() {
   const hour = new Date().getHours();
   const part = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
   $('#home-date').textContent = fmtDay(k, { weekday: 'long', day: 'numeric', month: 'long' });
-  $('#greet').textContent = `Good ${part}, ${S().name}`;
+  $('#greet').textContent = S().name ? `Good ${part}, ${S().name}` : `Good ${part}`;
   $('#greet-sub').textContent = s.total && s.done === s.total ? 'Every habit done. What a day!' :
     { morning: 'Ready for a good day? Let’s grow something.', afternoon: 'Keep the momentum going.', evening: 'Time to wind down gently.' }[part];
   $('#home-bubble').textContent = !s.total ? 'Plant a habit!' : s.done === 0 ? 'Let’s start small!' : s.done === s.total ? 'Perfect day!' : s.done / s.total >= 0.5 ? 'More than halfway!' : 'Nice start!';
@@ -183,7 +183,7 @@ function renderInsights() {
     else if (perfect(k)) dot = `<span class="dot${isT ? ' big' : ''}" style="--dl:${i * 70}ms">${checkSvg}</span>`;
     else if (isT) dot = `<span class="dot pending"><i style="--p:${ts.total ? ts.done / ts.total : 0}"></i></span>`;
     else dot = '<span class="dot miss"></span>';
-    return `<div class="sk-day${isT ? ' today' : ''}"><span class="sk-l">${fmtDay(k, { weekday: 'short' })}</span>${dot}</div>`;
+    return `<div class="sk-day${isT ? ' today' : ''}"><span class="sk-l">${fmtDay(k, { weekday: 'short' })}</span><span class="sk-cell">${dot}</span></div>`;
   }).join('');
   $('#sk-foot').textContent = `${ts.done} of ${ts.total} habits done today`;
 
@@ -855,7 +855,7 @@ document.addEventListener('click', (e) => {
     case 'privacy':
       openDialog(`<div class="sh-hero"><img class="sh-big" src="${ICON('shield')}" alt=""></div>
         <h3 class="sh-title">Your data stays on this iPad</h3>
-        <p class="sh-sub">Everything is saved in this browser only.${S().demo ? ' The history you see started as demo data.' : ''}</p>
+        <p class="sh-sub">Everything is saved in this browser only.</p>
         <button class="sh-row" data-action="export"><img src="${ICON('outbox-tray')}" alt="">Export as a file</button>
         <button class="sh-row danger" data-action="confirm-reset"><img src="${ICON('wastebasket')}" alt="">Start fresh</button>`);
       break;
@@ -868,12 +868,12 @@ document.addEventListener('click', (e) => {
     }
     case 'confirm-reset':
       openDialog(`<div class="sh-hero"><img class="sh-big" src="${ICON('seedling')}" alt=""></div>
-        <h3 class="sh-title">Start a fresh garden?</h3><p class="sh-sub">This clears your history, streaks and badges. Your starter habits stay.</p>
+        <h3 class="sh-title">Start a fresh garden?</h3><p class="sh-sub">This clears your habits, history, streaks and badges.</p>
         <div class="sh-pair"><button class="sh-btn ghost" data-action="close">Cancel</button><button class="sh-btn danger" data-action="reset-all">Start fresh</button></div>`);
       break;
     case 'reset-all': {
       const s = S();
-      store.state = freshState({ name: s.name, buddy: s.buddy, settings: s.settings, installDismissed: s.installDismissed });
+      store.state = blankState({ name: s.name, buddy: s.buddy, settings: s.settings, installDismissed: s.installDismissed });
       selId = null; save(); closeOverlays(); renderAll(); location.hash = '#home';
       toast('A fresh garden. Let’s grow!', 'seedling'); break;
     }
@@ -971,9 +971,21 @@ function fit() {
   app.style.width = DESIGN_W * s + 'px';
   stage.style.zoom = s;
   stage.style.height = innerHeight / s + 'px';
-  $('#rotate').classList.toggle('on', innerHeight > innerWidth);
+  $('#rotate').classList.toggle('on', devicePortrait());
+}
+// Ask to rotate only when the iPad itself is upright. The window's shape is not enough: Split View,
+// Slide Over and Stage Manager give tall windows in landscape, and iPadOS can report a stale
+// innerWidth/innerHeight right after launch or rotation.
+function devicePortrait() {
+  if (!navigator.maxTouchPoints) return false;                     // desktop browsers: any window shape is fine
+  const o = screen.orientation && screen.orientation.type;
+  if (o) return o.startsWith('portrait');
+  if (typeof orientation === 'number') return orientation % 180 === 0;
+  return screen.width < screen.height;
 }
 addEventListener('resize', fit);
+addEventListener('orientationchange', () => setTimeout(fit, 250));
+if (screen.orientation) screen.orientation.addEventListener('change', fit);
 addEventListener('hashchange', route);
 let lastDay = todayKey();
 setInterval(() => {
@@ -986,7 +998,7 @@ $('#sb-date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 's
 applyTheme();
 fit();
 renderAll();
-save();                                    // persist the seeded garden on first launch
+save();                                    // persist the new garden on first launch
 route();
 initPWA(() => { renderSidebar(); renderSettings(); });
 maybeOfferInstall();

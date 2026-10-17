@@ -48,7 +48,7 @@
       <a class="nav" href="#buddy" data-nav="buddy"><img data-buddy-img src="assets/3d/bear-orange.png" alt=""><span data-buddy-name>Nino</span></a>
       <a class="nav" href="#settings" data-nav="settings"><img src="assets/3d/gear.png" alt=""><span>Settings</span></a>
     </nav>
-    <a class="side-new" href="#new"><span class="side-plus"><svg width="16" height="16" viewBox="0 0 14 14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 1.5v11M1.5 7h11"/></svg></span>New habit<kbd>⌘N</kbd></a>
+    <a class="side-new" href="#new"><span class="side-plus"><svg width="16" height="16" viewBox="0 0 14 14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 1.5v11M1.5 7h11"/></svg></span>New habit</a>
 
     <a class="side-today" href="#home">
       <span class="side-ring"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="27" fill="none" class="ring-track" stroke-width="7"/><circle id="side-ring" cx="32" cy="32" r="27" fill="none" stroke="url(#sideG)" stroke-width="7" stroke-linecap="round" stroke-dasharray="0 170" transform="rotate(-90 32 32)"/><defs><linearGradient id="sideG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="xp-stop1"/><stop offset="1" class="xp-stop2"/></linearGradient></defs></svg><img id="side-plant" src="assets/3d/herb.png" alt=""></span>
@@ -59,7 +59,7 @@
 
     <a class="side-profile" href="#settings">
       <span class="side-ava"><img src="assets/3d/man.png" alt=""></span>
-      <span><b id="side-name">Lukman</b><span id="side-level">Level 1</span></span>
+      <span><b id="side-name">You</b><span id="side-level">Level 1</span></span>
     </a>
   </aside>
 
@@ -71,7 +71,7 @@
         <header class="hero reveal">
           <div class="hero-text">
             <span class="date-chip" id="home-date"></span>
-            <h1 class="greet" id="greet">Good morning, Lukman</h1>
+            <h1 class="greet" id="greet">Good morning</h1>
             <p class="greet-sub" id="greet-sub">Ready for a good day?</p>
           </div>
           <a class="hero-buddy" href="#buddy" aria-label="Chat with your buddy">
@@ -80,7 +80,7 @@
             <img data-buddy-img src="assets/3d/bear-orange.png" alt="">
           </a>
           <div class="hero-actions">
-            <button class="glass-btn search-pill" data-action="search"><svg width="22" height="22" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12.5" cy="12.5" r="8"/><path d="m18.5 18.5 5 5"/></svg><span>Search</span><kbd>⌘K</kbd></button>
+            <button class="glass-btn search-pill" data-action="search"><svg width="22" height="22" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12.5" cy="12.5" r="8"/><path d="m18.5 18.5 5 5"/></svg><span>Search</span></button>
             <button class="glass-btn round" data-action="notifications" aria-label="Reminders">
               <svg width="26" height="28" viewBox="6 5.5 20 22.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 22.5h17c-1.6-1.6-2.4-3.3-2.4-6.3v-2.7a6.1 6.1 0 0 0-12.2 0v2.7c0 3-.8 4.7-2.4 6.3zM13 26c.7 1 1.8 1.6 3 1.6s2.3-.6 3-1.6"/></svg>
               <span class="bell-dot" id="bell-dot"></span>
@@ -477,7 +477,6 @@
     <div class="search-bar">
       <svg width="22" height="22" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12.5" cy="12.5" r="8"/><path d="m18.5 18.5 5 5"/></svg>
       <input id="search-input" placeholder="Search habits, or type a new one" autocomplete="off" aria-label="Search">
-      <kbd>esc</kbd>
     </div>
     <div class="search-results" id="search-results"></div>
   </div>

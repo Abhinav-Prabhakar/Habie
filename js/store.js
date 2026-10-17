@@ -59,7 +59,16 @@ export function defaultHabits(created) {
   ];
 }
 
-// Six believable weeks of history so the app feels alive on first launch.
+// A brand-new garden: no habits, no history, no name yet.
+export function blankState(keep) {
+  return {
+    v: 3, name: '', buddy: 'bear-orange', habits: [], log: {}, sleep: {}, chat: [], notified: {},
+    settings: { dark: matchMedia('(prefers-color-scheme: dark)').matches, accent: 'lavender', sounds: true, reminders: false, focus: false },
+    sort: 'time', demo: false, installDismissed: false, ...keep,
+  };
+}
+
+// Six believable weeks of history, only for the README mock-ups (?demo).
 export function seed() {
   const t = todayKey();
   const habits = defaultHabits(addDays(t, -60));
@@ -88,18 +97,19 @@ export function seed() {
   };
 }
 
-export function freshState(keep) {
-  return { ...seed(), ...keep, habits: defaultHabits(todayKey()), log: {}, sleep: {}, chat: [], demo: false };
-}
-
 export function load() {
   const params = new URLSearchParams(location.search);
   if (params.has('reset')) { try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ } }
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) { const s = JSON.parse(raw); if (s && s.v === 3) return s; }
-  } catch (e) { /* storage unavailable: fall through to a fresh seed */ }
-  return seed();
+    if (raw) {
+      const s = JSON.parse(raw);
+      // Gardens that started from the old demo history begin again, keeping only preferences.
+      if (s && s.v === 3 && s.demo && !params.has('demo')) return blankState({ buddy: s.buddy, settings: s.settings, installDismissed: s.installDismissed, name: s.name === 'Lukman' ? '' : s.name });
+      if (s && s.v === 3) return s;
+    }
+  } catch (e) { /* storage unavailable: fall through to a blank garden */ }
+  return params.has('demo') ? seed() : blankState();
 }
 
 export const store = { state: load() };

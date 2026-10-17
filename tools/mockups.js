@@ -12,11 +12,11 @@ fs.mkdirSync(OUT, { recursive: true });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function open(page, hash, setup) {
-  await page.goto(`${BASE}?mockup&reset${hash}`);
+  await page.goto(`${BASE}?mockup&reset&demo${hash}`);
   await sleep(600);
   if (setup) {
     await page.evaluate(setup);
-    await page.goto(`${BASE}?mockup${hash}`);
+    await page.goto(`${BASE}?mockup&demo${hash}`);
   }
   await sleep(1600);
 }

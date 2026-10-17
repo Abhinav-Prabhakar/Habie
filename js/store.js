@@ -17,8 +17,17 @@ export const BUDDIES = [
   { id: 'bear-orange', name: 'Nino' }, { id: 'frog', name: 'Ribbit' }, { id: 'fox', name: 'Foxy' },
   { id: 'panda', name: 'Bamboo' }, { id: 'penguin', name: 'Pip' }, { id: 'owl', name: 'Hoot' }, { id: 'unicorn', name: 'Sparkle' },
 ];
-export const NEW_ICONS = ['running-shoe', 'books', 'person-in-lotus-position', 'droplet', 'green-salad', 'bed', 'toothbrush',
-  'guitar', 'pill', 'mobile-phone-off', 'brain', 'headphone', 'sunflower', 'pencil', 'teacup-without-handle', 'footprints', 'broccoli', 'carrot'];
+// The icon picker's tabs. NEW_ICONS is every pickable icon.
+export const ICON_GROUPS = [
+  { id: 'health', label: 'Health', icons: ['droplet', 'pill', 'toothbrush', 'tooth', 'bed', 'sleeping-face', 'zzz', 'stethoscope', 'adhesive-bandage', 'lungs', 'anatomical-heart', 'eye', 'soap', 'shower', 'bathtub', 'lotion-bottle', 'no-entry', 'cigarette', 'wine-glass', 'beer-mug'] },
+  { id: 'food', label: 'Food', icons: ['green-salad', 'broccoli', 'carrot', 'red-apple', 'apple', 'avocado', 'banana', 'strawberry', 'watermelon', 'leafy-green', 'cooking', 'bowl-with-spoon', 'hot-beverage', 'teacup-without-handle', 'glass-of-milk', 'cup-with-straw', 'baby-bottle', 'chocolate-bar', 'lollipop', 'birthday-cake'] },
+  { id: 'move', label: 'Move', icons: ['running-shoe', 'footprints', 'biceps', 'bicycle', 'basketball', 'soccer-ball', 'tennis', 'volleyball', 'badminton', 'ping-pong', 'skateboard', 'roller-skate', 'ice-skate', 'skis', 'kite', 'yo-yo', 'mountain', 'camping', 'national-park', 'flag-in-hole'] },
+  { id: 'mind', label: 'Mind', icons: ['person-in-lotus-position', 'brain', 'books', 'open-book', 'notebook', 'ledger', 'memo', 'pencil', 'graduation-cap', 'crystal-ball', 'thinking-face', 'smiling-face-with-halo', 'red-heart', 'sparkling-heart', 'cherry-blossom', 'mobile-phone-off', 'hourglass-done', 'infinity'] },
+  { id: 'home', label: 'Home', icons: ['house', 'broom', 'sponge', 'basket', 'dog', 'cat-face', 'paw-prints', 'sunflower', 'tulip', 'rose', 'hibiscus', 'cactus', 'deciduous-tree', 'evergreen-tree', 'potted-plant', 'herb', 'seedling', 'wrapped-gift'] },
+  { id: 'work', label: 'Work', icons: ['laptop', 'desktop-computer', 'keyboard', 'envelope', 'telephone-receiver', 'speaking-head', 'spiral-calendar', 'calendar', 'alarm-clock', 'clipboard', 'chart-increasing', 'money-bag', 'coin', 'credit-card', 'bullseye', 'rocket', 'key', 'bulb'] },
+  { id: 'create', label: 'Create', icons: ['guitar', 'headphone', 'musical-note', 'musical-keyboard', 'violin', 'drum', 'saxophone', 'microphone', 'artist-palette', 'paintbrush', 'camera', 'video-game', 'puzzle-piece', 'chess-pawn', 'sparkles', 'star', 'globe-showing-americas', 'speech-balloon'] },
+];
+export const NEW_ICONS = ICON_GROUPS.flatMap((g) => g.icons);
 export const IDEAS = [
   { name: 'Morning run', icon: 'running-shoe', time: 'morning', color: 1 },
   { name: 'No phone in bed', icon: 'mobile-phone-off', time: 'evening', color: 2 },
@@ -215,6 +224,22 @@ export const BADGES = [
   { id: 'champion', name: 'Champion', icon: 'trophy', b: ['#fff3d6', '#ffd98a'], goal: 300, desc: 'habits done', cur: () => totals().done },
   { id: 'royal', name: 'Royalty', icon: 'crown', b: ['#fff0e0', '#ffd5a8'], goal: 10, desc: 'level', cur: () => totals().level },
   { id: 'rainbow', name: 'All-rounder', icon: 'rainbow', b: ['#ffe9f1', '#e5dcff'], goal: 14, desc: 'day streak', cur: () => bestStreak() },
+  { id: 'sprout', name: 'First Sprout', icon: 'seedling', b: ['#e4f8e9', '#c3efcf'], goal: 1, desc: 'habit done', cur: () => totals().done },
+  { id: 'gardener', name: 'Gardener', icon: 'potted-plant', b: ['#e4f8e9', '#bfe9c9'], goal: 5, desc: 'habits planted', cur: () => S().habits.length },
+  { id: 'hattrick', name: 'Hat-trick', icon: '3rd-place-medal', b: ['#ffeede', '#ffd6b5'], goal: 3, desc: 'day streak', cur: () => bestStreak() },
+  { id: 'silver', name: 'Silver Streak', icon: '2nd-place-medal', b: ['#eef1f6', '#d6dde8'], goal: 21, desc: 'day streak', cur: () => bestStreak() },
+  { id: 'legend', name: 'Legend', icon: 'dragon', b: ['#e2f7ec', '#bdebd2'], goal: 30, desc: 'day streak', cur: () => bestStreak() },
+  { id: 'century', name: 'Centurion', icon: 'hundred-points', b: ['#ffe8e8', '#ffcaca'], goal: 100, desc: 'habits done', cur: () => totals().done },
+  { id: 'galaxy', name: 'Galaxy Brain', icon: 'milky-way', b: ['#e8e6ff', '#cdc8ff'], goal: 1000, desc: 'habits done', cur: () => totals().done },
+  { id: 'owl', name: 'Night Owl', icon: 'owl', b: ['#ebe8ff', '#d6d0ff'], goal: 7, desc: 'evenings done',
+    cur: () => countDays((k) => habitsOn(k).some((h) => h.time === 'evening' && isDone(h, k))) },
+  { id: 'sunny', name: 'Sunny Side', icon: 'sun-with-face', b: ['#fff6d6', '#ffe9a0'], goal: 7, desc: 'afternoons done',
+    cur: () => countDays((k) => habitsOn(k).some((h) => h.time === 'afternoon' && isDone(h, k))) },
+  { id: 'dreamer', name: 'Sweet Dreams', icon: 'sleeping-face', b: ['#e2efff', '#c6dcff'], goal: 7, desc: 'nights of 7h+', cur: () => Object.values(S().sleep).filter((h) => h >= 7).length },
+  { id: 'weekend', name: 'Weekend Hero', icon: 'sports-medal', b: ['#fff0e0', '#ffdcb5'], goal: 4, desc: 'perfect weekend days', cur: () => countDays((k) => monIndex(k) >= 5 && perfect(k)) },
+  { id: 'chatty', name: 'Chatterbox', icon: 'speech-balloon', b: ['#e6f6ff', '#c4e8fb'], goal: 20, desc: 'buddy messages', cur: () => S().chat.filter((m) => m.from === 'me').length },
+  { id: 'star', name: 'Shooting Star', icon: 'shooting-star', b: ['#fff3d6', '#ffe0a0'], goal: 5, desc: 'level', cur: () => totals().level },
+  { id: 'comet', name: 'Comet', icon: 'comet', b: ['#e9e6ff', '#d2ccff'], goal: 50, desc: 'perfect days', cur: () => totals().perfectDays },
 ];
 export const unlocked = () => BADGES.filter((b) => b.cur() >= b.goal).map((b) => b.id);
 export const progressText = (h, v) => `${fmtNum(v)} of ${fmtNum(h.goal)} ${h.unit}`;

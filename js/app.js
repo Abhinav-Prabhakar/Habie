@@ -1,6 +1,6 @@
 // Habie — the iPad app: rendering, routing and interaction.
 import {
-  store, save, ICON, TIMES, TIME_ORDER, COLORS, ACCENTS, BUDDIES, NEW_ICONS, IDEAS, QUOTES, LEVEL_XP, BADGES,
+  store, save, ICON, TIMES, TIME_ORDER, COLORS, ACCENTS, BUDDIES, ICON_GROUPS, IDEAS, QUOTES, LEVEL_XP, BADGES,
   keyOf, dateOf, addDays, todayKey, monIndex, fmtDay, nowHHMM, fmtNum, blankState,
   habitById, val, isDone, scheduled, habitsOn, dayStats, perfect, color, buddy, stepOf, setVal,
   streak, bestStreak, habitStreak, habitBest, habitRate, totals, unlocked, progressText,
@@ -20,6 +20,7 @@ if (params.has('mockup')) document.documentElement.classList.add('mockup');
 let viewDay = todayKey();
 let filter = 'all';
 let selId = null;
+let iconGroup = null;                     // the icon picker's open tab
 let lastChange = { id: null, at: 0 };
 const justChanged = (h) => lastChange.id === h.id && performance.now() - lastChange.at < 700;
 
@@ -367,7 +368,7 @@ function renderChat(animateLast) {
     if (m.typing) return `<div class="msg bot typing${anim}"><span class="m-ava"><img src="${ICON(S().buddy)}" alt=""></span><p><i></i><i></i><i></i></p></div>`;
     const acts = m.actions ? `<div class="m-actions">${m.actions.map((a) => a.href ? `<a class="m-act" href="${a.href}">${esc(a.label)}</a>` :
       a.say ? `<button class="m-act" data-say="${a.say}">${esc(a.label)}</button>` : `<button class="m-act" data-action="${a.action}">${esc(a.label)}</button>`).join('')}</div>` : '';
-    const body = (m.img ? `<img class="m-img" src="${m.img}" alt="Shared photo">` : '') + (m.text ? `<p>${m.text}</p>` : '') + (m.cards ? `<div class="m-cards">${m.cards}</div>` : '') + acts;
+    const body = (m.img ? `<img class="m-img" src="${m.img}" alt="Shared photo">` : '') + (m.text ? (m.md ? `<div class="m-md">${m.text}</div>` : `<p>${m.text}</p>`) : '') + (m.cards ? `<div class="m-cards">${m.cards}</div>` : '') + acts;
     return m.from === 'me' ? `<div class="msg me${anim}">${body}</div>` : `<div class="msg bot${anim}"><span class="m-ava"><img src="${ICON(S().buddy)}" alt=""></span><div class="m-body">${body}</div></div>`;
   }).join('');
   const sc = $('#convo-scroll');
@@ -447,7 +448,9 @@ function renderEditor() {
   $('#n-preview-icon').src = ICON(draft.icon);
   if (document.activeElement !== $('#n-name')) $('#n-name').value = draft.name;
   $('#n-ideas').innerHTML = IDEAS.map((idea, i) => `<button class="idea" data-idea="${i}"><img src="${ICON(idea.icon)}" alt="">${idea.name}</button>`).join('');
-  $('#n-icons').innerHTML = NEW_ICONS.map((ic) => `<button class="pick${ic === draft.icon ? ' on' : ''}" data-icon="${ic}"><img src="${ICON(ic)}" alt=""></button>`).join('');
+  const group = ICON_GROUPS.find((g) => g.id === iconGroup) || ICON_GROUPS[0];
+  $('#n-icon-tabs').innerHTML = ICON_GROUPS.map((g) => `<button class="icon-tab${g === group ? ' on' : ''}" data-icon-group="${g.id}"><img src="${ICON(g.icons[0])}" alt="">${g.label}</button>`).join('');
+  $('#n-icons').innerHTML = group.icons.map((ic) => `<button class="pick${ic === draft.icon ? ' on' : ''}" data-icon="${ic}"><img src="${ICON(ic)}" alt="" loading="lazy"></button>`).join('');
   $('#n-colors').innerHTML = COLORS.map((c, i) => `<button class="swatch${i === draft.color ? ' on' : ''}" data-color="${i}" style="--sw:${c}" aria-label="Colour ${i + 1}"></button>`).join('');
   $$('#n-times .time-opt').forEach((b) => b.classList.toggle('on', b.dataset.time === draft.time));
   $('#n-days').innerHTML = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => `<button class="day${draft.days[i] ? ' on' : ''}" data-dayi="${i}">${d}</button>`).join('');
@@ -467,6 +470,7 @@ function renderEditor() {
 }
 function openEditor(h) {
   draft = h ? JSON.parse(JSON.stringify(h)) : newDraft();
+  iconGroup = (ICON_GROUPS.find((g) => g.icons.includes(draft.icon)) || ICON_GROUPS[0]).id;
   const pre = sessionStorage.getItem('habie.prefill');
   if (!h && pre) { draft.name = pre; sessionStorage.removeItem('habie.prefill'); }
   renderEditor();
@@ -783,6 +787,7 @@ document.addEventListener('click', (e) => {
     else draft.goal = Math.max(draft.step, Math.min(draft.step * 10, draft.goal + d * draft.step));
     renderEditor(); sound('tap'); return;
   }
+  if ((t = el('[data-icon-group]'))) { iconGroup = t.dataset.iconGroup; renderEditor(); $('#n-icons').scrollTop = 0; sound('tap'); return; }
   if ((t = el('[data-setting]'))) {
     const key = t.dataset.setting, on = !S().settings[key];
     if (key === 'reminders') { setReminders(on); return; }

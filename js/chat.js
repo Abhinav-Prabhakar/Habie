@@ -3,10 +3,12 @@
 // local responder answers from the habit data.
 import { CONFIG } from '../config.js';
 import {
-  store, ICON, TIMES, TIME_ORDER, IDEAS, COLORS, ACCENTS, BUDDIES, todayKey, addDays, monIndex, habitsOn, isDone, val,
+  store, ICON, TIMES, TIME_ORDER, IDEAS, NEW_ICONS, COLORS, ACCENTS, BUDDIES, todayKey, addDays, monIndex, habitsOn, isDone, val,
   habitById, dayStats, streak, bestStreak, habitStreak, habitRate, totals, unlocked, BADGES, fmtNum, buddy, color,
 } from './store.js';
 import { esc, checkSvg } from './fx.js';
+import { marked } from '../assets/vendor/marked.esm.js';
+import DOMPurify from '../assets/vendor/purify.es.mjs';
 
 const TIPS = [
   'Stack a new habit onto an old one: “After I pour my coffee, I’ll drink a glass of water.”',
@@ -26,12 +28,7 @@ export const hasDeployedKey = () => !!deployedKey;
 export const getKey = () => ownKey() || deployedKey;
 export const setKey = (k) => { try { k ? localStorage.setItem(KEY_SLOT, k.trim()) : localStorage.removeItem(KEY_SLOT); } catch (e) { /* private mode */ } };
 
-const ICONS = ['1st-place-medal', 'alarm-clock', 'apple', 'artist-palette', 'bar-chart', 'bed', 'bell', 'biceps', 'bicycle', 'books', 'brain',
-  'broccoli', 'bulb', 'bullseye', 'calendar', 'carrot', 'chart-increasing', 'check-mark-button', 'cherry-blossom', 'clipboard', 'cloud',
-  'crescent-moon', 'crown', 'droplet', 'fire', 'footprints', 'gem-stone', 'glowing-star', 'green-salad', 'guitar', 'headphone', 'herb',
-  'high-voltage', 'hourglass-not-done', 'house', 'key', 'memo', 'mobile-phone-off', 'open-book', 'pencil', 'person-in-lotus-position', 'pill',
-  'potted-plant', 'rainbow', 'red-apple', 'rocket', 'running-shoe', 'seedling', 'sleeping-face', 'sparkles', 'speech-balloon', 'star', 'stopwatch',
-  'sun', 'sunflower', 'sunrise', 'teacup-without-handle', 'toothbrush', 'trophy', 'waving-hand', 'wrapped-gift', 'zzz'];
+const ICONS = [...NEW_ICONS, 'fire', 'trophy', 'crown', 'gem-stone', 'glowing-star', 'high-voltage', 'rainbow', 'sun', 'sunrise', 'crescent-moon', 'cloud', 'stopwatch', 'waving-hand'];
 const DAY_NAMES = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 // What the model (or a custom endpoint) sees about the user's garden.
@@ -185,7 +182,8 @@ function system() {
 - When the user mentions doing something ("I drank a glass of water", "read 10 pages"), log it on the matching habit. A glass of water is 0.25 L.
 - Pick fitting icons, units, steps and times when creating habits. Keep goals small and realistic.
 - Ask before deleting a habit unless the request is explicit. Never call start_fresh unless the user has said yes to wiping everything.
-- Reply in 1–3 short, warm sentences. You may use **bold** and "- " lists. No headings, no emoji-heavy text.
+- Keep replies short and warm: 1–3 sentences for changes and chit-chat; longer only when the user asks to explain or plan something.
+- Format with Markdown (bold, lists, tables, code). Write maths in LaTeX: $…$ inline, $$…$$ on its own line.
 - Dates are YYYY-MM-DD. Use only habit ids from the data below.
 Current data:
 ${JSON.stringify(context())}`;
@@ -197,9 +195,33 @@ function history() {
   return store.state.chat.filter((m) => !m.typing && m.text).slice(-13, -1)
     .map((m) => ({ role: m.from === 'me' ? 'user' : 'assistant', content: plain(m.text) }));
 }
-function format(text) {
-  const lines = esc(text.trim()).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').split('\n');
-  return lines.map((l) => (/^\s*[-•*] /.test(l) ? `• ${l.replace(/^\s*[-•*] /, '')}` : l)).join('<br>').replace(/(<br>){3,}/g, '<br><br>');
+/* ---------- Markdown + LaTeX ---------- */
+marked.use({ gfm: true, breaks: true });
+DOMPurify.addHook('afterSanitizeAttributes', (n) => {
+  if (n.tagName === 'A' && !(n.getAttribute('href') || '').startsWith('#')) { n.setAttribute('target', '_blank'); n.setAttribute('rel', 'noopener noreferrer'); }
+});
+let katexLoad;                                                     // KaTeX is big, so it loads the first time math shows up
+const loadKatex = () => (katexLoad ||= import('../assets/vendor/katex/katex.mjs').then((m) => m.default));
+// $$…$$ and \[…\] are display math; \(…\) and $…$ inline. A lone "$5" stays money.
+const MATH = /\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|\$(?=\S)((?:\\\$|[^$\n])+?)(?<=\S)\$(?!\d)/g;
+
+// Model text → safe HTML: math is cut out first so Markdown can't mangle it, then put back rendered.
+export async function format(text) {
+  const maths = [];
+  const src = text.trim().replace(/```[\s\S]*?```|`[^`\n]+`/g, (code) => code.replace(/\$/g, '\u0000'))   // no math inside code
+    .replace(MATH, (m, d1, d2, i1, i2) => { maths.push({ tex: d1 || d2 || i1 || i2, display: !!(d1 || d2) }); return `\u0001${maths.length - 1}\u0001`; })
+    .replace(/\u0000/g, '$');
+  let html = DOMPurify.sanitize(marked.parse(src), { FORBID_TAGS: ['img', 'style', 'iframe', 'form', 'input', 'video', 'audio'], FORBID_ATTR: ['style'] });
+  if (maths.length) {
+    let katex = null;
+    try { katex = await loadKatex(); } catch (e) { /* offline before it was cached: show the TeX */ }
+    html = html.replace(/\u0001(\d+)\u0001/g, (_, i) => {
+      const { tex, display } = maths[+i];
+      if (!katex) return `<code>${esc(tex)}</code>`;
+      return katex.renderToString(tex, { displayMode: display, throwOnError: false, output: 'htmlAndMathml', trust: false, maxExpand: 500 });
+    });
+  }
+  return html;
 }
 
 async function call(model, messages, key) {
@@ -237,7 +259,7 @@ async function agent(text, img, ops) {
     const calls = msg.tool_calls || [];
     if (!calls.length) {
       const seen = new Set();
-      return { from: 'bot', text: format(msg.content || 'Done!'), actions: actions.filter((x) => !seen.has(x.href) && seen.add(x.href)).slice(-3) };
+      return { from: 'bot', md: true, text: await format(msg.content || 'Done!'), actions: actions.filter((x) => !seen.has(x.href) && seen.add(x.href)).slice(-3) };
     }
     messages.push({ role: 'assistant', content: msg.content || null, tool_calls: calls });
     for (const c of calls) {
@@ -260,7 +282,7 @@ export async function reply(text, img, ops) {
       });
       if (!res.ok) throw new Error(res.status);
       const data = await res.json();
-      return { from: 'bot', text: format(data.reply || data.message || '…'), actions: data.actions || null };
+      return { from: 'bot', md: true, text: await format(data.reply || data.message || '…'), actions: data.actions || null };
     } catch (e) {
       return { from: 'bot', text: 'I couldn’t reach my brain just now. Here’s what I know offline:', ...local(text, img) };
     }

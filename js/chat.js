@@ -3,7 +3,7 @@
 // local responder answers from the habit data.
 import { CONFIG } from '../config.js';
 import {
-  store, ICON, TIMES, TIME_ORDER, IDEAS, NEW_ICONS, COLORS, ACCENTS, BUDDIES, todayKey, addDays, monIndex, habitsOn, isDone, val,
+  store, ICON, TIMES, TIME_ORDER, IDEAS, NEW_ICONS, COLORS, ACCENTS, BUDDIES, AVATARS, TONES, todayKey, addDays, monIndex, habitsOn, isDone, val,
   habitById, dayStats, streak, bestStreak, habitStreak, habitRate, totals, unlocked, BADGES, fmtNum, buddy, color,
   isQuit, isWeekly, isRest, daysClean, weekCount, noteOf, setNote, patterns, dueOn, perfect,
 } from './store.js';
@@ -36,7 +36,7 @@ const DAY_NAMES = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 export function context() {
   const k = todayKey(), s = store.state, tt = totals();
   return {
-    today: k, weekday: DAY_NAMES[monIndex(k)], name: s.name || null, buddy: buddy().name, streak: streak(), bestStreak: bestStreak(),
+    today: k, weekday: DAY_NAMES[monIndex(k)], name: s.name || null, avatar: s.avatar, buddy: buddy().name, streak: streak(), bestStreak: bestStreak(),
     level: tt.level, xp: tt.xp, habitsDone: tt.done, perfectDays: tt.perfectDays, badges: unlocked(),
     settings: s.settings, sleepLastNight: s.sleep[addDays(k, -1)] || null, streakFreezes: s.freezes, restDayToday: isRest(k),
     timerRunning: s.timer ? { habit: s.timer.id, minutes: Math.round((Date.now() - s.timer.start) / 6000) / 10 } : null,
@@ -91,7 +91,10 @@ const TOOLS = [
     dark: bool('Dark mode'), accent: str('Colour theme', { enum: Object.keys(ACCENTS) }), sounds: bool('Sounds'),
     focus: bool('Focus mode: hide finished habits'), reminders: bool('Reminder notifications'),
   }),
-  fn('update_profile', 'Change the user’s name or their buddy.', { name: str('User’s first name'), buddy: str('Buddy', { enum: BUDDIES.map((b) => b.id) }) }),
+  fn('update_profile', 'Change the user’s name, profile picture or buddy.', {
+    name: str('User’s first name'), buddy: str('Buddy', { enum: BUDDIES.map((b) => b.id) }),
+    avatar: str('Profile picture figure', { enum: AVATARS.map((a) => a.id) }), skin_tone: str('Profile picture skin tone', { enum: TONES }),
+  }),
   fn('open_screen', 'Show a screen of the app.', { screen: str('Screen', { enum: ['home', 'insights', 'habits', 'buddy', 'settings', 'new'] }), habit_id: str('With screen "habits", open this habit') }, ['screen']),
   fn('start_fresh', 'Wipe all habits, history, streaks and badges. Only after the user has explicitly confirmed.', { confirmed: bool('The user said yes to wiping everything') }, ['confirmed']),
 ];
@@ -206,6 +209,8 @@ function run(name, a, ops, out) {
     case 'update_profile': {
       if (typeof a.name === 'string') s.name = a.name.trim().slice(0, 16);
       if (BUDDIES.some((b) => b.id === a.buddy)) s.buddy = a.buddy;
+      if (AVATARS.some((x) => x.id === a.avatar)) s.avatar.id = a.avatar;
+      if (TONES.includes(a.skin_tone)) s.avatar.tone = a.skin_tone;
       ops.changed();
       return { ok: true };
     }

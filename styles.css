@@ -1102,3 +1102,12 @@ a.mx-row:hover { background: var(--surface-3); }
 .pt-ai-h img { width: 26px; }
 .pt-ai .m-md { padding: 0; background: none; border-radius: 0; font-size: 16px; }
 .pt-ai .m-md p { margin: 0 0 8px; }
+
+/* profile picture: swipe for a figure, tap for a skin tone */
+.avatar { touch-action: pan-y; cursor: grab; -webkit-user-select: none; user-select: none; }
+.avatar-bg img { -webkit-user-drag: none; }
+.avatar-bg img.swap { animation: none; }
+.ava-arrow { position: absolute; top: 50%; z-index: 2; width: 26px; height: 26px; margin-top: -13px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--muted); box-shadow: 0 3px 10px -3px rgba(0,0,0,.25); opacity: .85; transition: opacity .2s, transform .2s, color .2s; }
+.ava-arrow.prev { left: -8px; } .ava-arrow.next { right: -8px; }
+.ava-arrow:hover { opacity: 1; color: var(--a-ink); }
+.ava-arrow:active { transform: scale(.88); }

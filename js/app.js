@@ -1,6 +1,6 @@
 // Habie — the iPad app: rendering, routing and interaction.
 import {
-  store, save, ICON, TIMES, TIME_ORDER, COLORS, ACCENTS, BUDDIES, ICON_GROUPS, IDEAS, QUOTES, LEVEL_XP, BADGES,
+  store, save, ICON, TIMES, TIME_ORDER, COLORS, ACCENTS, BUDDIES, AVATARS, TONES, avatarSrc, ICON_GROUPS, IDEAS, QUOTES, LEVEL_XP, BADGES,
   keyOf, dateOf, addDays, todayKey, monIndex, fmtDay, nowHHMM, fmtNum, blankState,
   habitById, val, isDone, scheduled, habitsOn, dayStats, perfect, color, buddy, stepOf, setVal,
   streak, bestStreak, habitStreak, habitBest, habitRate, totals, unlocked, progressText,
@@ -33,6 +33,38 @@ function applyTheme() {
   root.dataset.mode = S().settings.dark ? 'dark' : 'light';
   root.dataset.accent = S().settings.accent;
   $('meta[name=theme-color]').content = getComputedStyle(root).getPropertyValue('--h1').trim() || '#7372c8';
+}
+function renderAvatar() {
+  const a = S().avatar, src = avatarSrc(a), label = (AVATARS.find((x) => x.id === a.id) || AVATARS[0]).label;
+  $$('[data-avatar-img]').forEach((img) => { if (!img.src.endsWith(src)) img.src = src; img.alt = `${label}, ${a.tone === 'default' ? 'yellow' : a.tone} skin tone`; });
+}
+// Swipe (or the arrows) to change the figure, tap to change the skin tone.
+function changeAvatar(step, tone) {
+  const a = S().avatar, img = $('#p-ava');
+  if (tone) a.tone = TONES[(TONES.indexOf(a.tone) + 1) % TONES.length];
+  else a.id = AVATARS[(AVATARS.findIndex((x) => x.id === a.id) + step + AVATARS.length) % AVATARS.length].id;
+  save(); sound('tap'); buzz(8);
+  if (REDUCED) { renderAvatar(); return; }
+  img.classList.add('swap');
+  const out = tone ? [{ transform: 'scale(1)' }, { transform: 'scale(.6) rotate(-10deg)', opacity: 0 }] : [{ transform: 'none' }, { transform: `translateX(${-step * 70}px) rotate(${-step * 12}deg)`, opacity: 0 }];
+  img.animate(out, { duration: 160, easing: 'cubic-bezier(.4,0,1,1)' }).onfinish = () => {
+    renderAvatar();
+    const inn = tone ? [{ transform: 'scale(.6) rotate(10deg)', opacity: 0 }, { transform: 'scale(1.08)', opacity: 1, offset: 0.7 }, { transform: 'none' }]
+      : [{ transform: `translateX(${step * 70}px) rotate(${step * 12}deg)`, opacity: 0 }, { transform: 'none', opacity: 1 }];
+    img.animate(inn, { duration: 340, easing: 'cubic-bezier(.3,1.4,.5,1)' }).onfinish = () => img.classList.remove('swap');
+  };
+}
+{
+  let sx = 0, sy = 0, down = false;
+  const box = $('#avatar');
+  box.addEventListener('pointerdown', (e) => { if (e.target.closest('.ava-arrow')) return; down = true; sx = e.clientX; sy = e.clientY; });
+  box.addEventListener('pointerup', (e) => {
+    if (!down) return; down = false;
+    const dx = (e.clientX - sx) / view.scale, dy = (e.clientY - sy) / view.scale;
+    if (Math.abs(dx) > 28 && Math.abs(dx) > Math.abs(dy)) changeAvatar(dx < 0 ? 1 : -1);
+    else if (Math.abs(dx) < 8 && Math.abs(dy) < 8) changeAvatar(0, true);
+  });
+  box.addEventListener('pointercancel', () => { down = false; });
 }
 function renderBuddy() {
   const b = buddy();
@@ -94,6 +126,7 @@ function renderSidebar() {
   nb.textContent = s.total ? (left ? left : '✓') : '';
   nb.classList.toggle('done', s.total > 0 && !left);
   $('#side-name').textContent = S().name || 'You';
+  renderAvatar();
   $('#side-level').textContent = `Level ${tt.level} · ${tt.xp} XP`;
   const inst = installState();
   $('#install-btn').hidden = inst.installed;
@@ -1006,6 +1039,7 @@ document.addEventListener('click', (e) => {
     else draft.goal = Math.max(draft.step, Math.min(draft.step * 10, draft.goal + d * draft.step));
     renderEditor(); sound('tap'); return;
   }
+  if ((t = el('[data-avatar-step]'))) { changeAvatar(+t.dataset.avatarStep); return; }
   if ((t = el('[data-icon-group]'))) { iconGroup = t.dataset.iconGroup; renderEditor(); $('#n-icons').scrollTop = 0; sound('tap'); return; }
   if ((t = el('[data-setting]'))) {
     const key = t.dataset.setting, on = !S().settings[key];

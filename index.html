@@ -81,7 +81,7 @@
     <button class="side-install" id="install-btn" data-action="install" hidden><img src="assets/3d/outbox-tray.png" alt=""><span><b>Install Habie</b>Add to Home Screen</span></button>
 
     <a class="side-profile" href="#settings">
-      <span class="side-ava"><img src="assets/3d/man.png" alt=""></span>
+      <span class="side-ava"><img data-avatar-img src="assets/3d/people/person-default.png" alt=""></span>
       <span><b id="side-name">You</b><span id="side-level">Level 1</span></span>
     </a>
   </aside>
@@ -398,9 +398,11 @@
         <div class="set-grid">
           <div class="set-col">
             <div class="card profile reveal">
-              <div class="avatar">
+              <div class="avatar" id="avatar" role="group" aria-label="Profile picture. Swipe to change, tap for skin tone">
                 <svg class="avatar-ring" width="132" height="132" viewBox="0 0 132 132"><circle cx="66" cy="66" r="60" fill="none" class="ring-track" stroke-width="7"/><circle id="xp-ring" cx="66" cy="66" r="60" fill="none" stroke="url(#xpG)" stroke-width="7" stroke-linecap="round" stroke-dasharray="0 377" transform="rotate(-90 66 66)"/><defs><linearGradient id="xpG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="xp-stop1"/><stop offset="1" class="xp-stop2"/></linearGradient></defs></svg>
-                <span class="avatar-bg"><img src="assets/3d/man.png" alt=""></span>
+                <span class="avatar-bg"><img data-avatar-img id="p-ava" src="assets/3d/people/person-default.png" alt="" draggable="false"></span>
+                <button class="ava-arrow prev" data-avatar-step="-1" aria-label="Previous picture"><svg width="8" height="12" viewBox="0 0 8 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 2 6l4 4"/></svg></button>
+                <button class="ava-arrow next" data-avatar-step="1" aria-label="Next picture"><svg width="8" height="12" viewBox="0 0 8 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 2 4 4-4 4"/></svg></button>
                 <span class="lvl" id="p-level">Lv 1</span>
               </div>
               <div class="p-info">

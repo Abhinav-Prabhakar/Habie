@@ -36,6 +36,13 @@ export const IDEAS = [
   { name: 'Practice guitar', icon: 'guitar', time: 'evening', color: 3 },
   { name: 'Vitamins', icon: 'pill', time: 'morning', color: 6 },
 ];
+// Profile pictures: swipe through the figures, tap through the skin tones.
+export const AVATARS = [
+  { id: 'person', label: 'Person' }, { id: 'woman', label: 'Woman' }, { id: 'man', label: 'Man' },
+  { id: 'woman-with-headscarf', label: 'Woman with headscarf' }, { id: 'older-person', label: 'Older person' },
+];
+export const TONES = ['default', 'light', 'medium', 'dark'];
+export const avatarSrc = (a) => `assets/3d/people/${(a && a.id) || 'person'}-${(a && a.tone) || 'default'}.png`;
 export const QUOTES = [
   'Small steps every day add up to big changes.',
   'You don’t have to be perfect, just consistent.',
@@ -75,7 +82,7 @@ export function defaultHabits(created) {
   ];
 }
 
-const EXTRA = { rest: {}, frozen: {}, freezes: 1, freezeCheck: null, freezeEarned: null, notes: {}, timer: null, insight: null };
+const EXTRA = { avatar: { id: 'person', tone: 'default' }, rest: {}, frozen: {}, freezes: 1, freezeCheck: null, freezeEarned: null, notes: {}, timer: null, insight: null };
 
 // A brand-new garden: no habits, no history, no name yet.
 export function blankState(keep) {
@@ -101,7 +108,7 @@ export function seed() {
   let r0 = 20240319;
   const rnd = () => (r0 = (r0 * 9301 + 49297) % 233280) / 233280;
   const log = {}, sleep = {}, notes = {}, rest = {}, frozen = {};
-  const state = { v: 3, name: 'Lukman', buddy: 'bear-orange', habits, log, sleep, chat: [], notified: {}, notes, rest, frozen,
+  const state = { v: 3, name: 'Lukman', avatar: { id: 'man', tone: 'default' }, buddy: 'bear-orange', habits, log, sleep, chat: [], notified: {}, notes, rest, frozen,
     settings: { dark: matchMedia('(prefers-color-scheme: dark)').matches, accent: 'lavender', sounds: true, reminders: false, focus: false },
     sort: 'time', demo: true, installDismissed: false, freezes: 2, freezeCheck: addDays(t, -1), freezeEarned: null, timer: null, insight: null };
   const moods = ['', 'Rough one', 'Okay', 'Felt good', 'Really good', 'Loved it'];

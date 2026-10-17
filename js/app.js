@@ -4,9 +4,10 @@ import {
   keyOf, dateOf, addDays, todayKey, monIndex, fmtDay, nowHHMM, fmtNum, blankState,
   habitById, val, isDone, scheduled, habitsOn, dayStats, perfect, color, buddy, stepOf, setVal,
   streak, bestStreak, habitStreak, habitBest, habitRate, totals, unlocked, progressText,
+  isQuit, isWeekly, quitHabits, dueOn, isRest, isFrozen, settleDays, maybeEarnFreeze, weekCount, daysClean, MOODS, noteOf, setNote, patterns,
 } from './store.js';
 import { $, $$, esc, checkSvg, view, REDUCED, countTo, ring, stagePoint, confetti, rain, toast, sound, buzz } from './fx.js';
-import { reply, CHIP_TEXT, getKey, ownKey, setKey, hasDeployedKey } from './chat.js';
+import { reply, CHIP_TEXT, getKey, ownKey, setKey, hasDeployedKey, writeInsights } from './chat.js';
 import { initPWA, installState, promptInstall } from './pwa.js';
 
 const S = () => store.state;
@@ -42,15 +43,42 @@ const emptyState = (title, sub) =>
   `<div class="empty"><img src="${ICON('seedling')}" alt=""><b>${title}</b><span>${sub}</span><a class="empty-btn" href="#new">New habit</a></div>`;
 const plantFor = (done, n) => (n && done === n ? 'sunflower' : n && done / n >= 0.6 ? 'potted-plant' : n && done / n >= 0.3 ? 'herb' : 'seedling');
 
+const playSvg = '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>';
+const pauseSvg = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="3.5" y="2.5" width="3" height="11" rx="1"/><rect x="9.5" y="2.5" width="3" height="11" rx="1"/></svg>';
+const timing = (h) => S().timer && S().timer.id === h.id;
+const timerMin = () => (Date.now() - S().timer.start) / 60000;
+const liveVal = (h, k) => val(h, k) + (timing(h) && S().timer.day === k ? timerMin() : 0);
+const mmss = (min) => { const sec = Math.floor(min * 60); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; };
+const freqText = (h) => (isQuit(h) ? 'Every day' : isWeekly(h) ? `${h.perWeek}× a week` : h.freq === 'interval' ? `Every ${h.every} days`
+  : ((n) => (n === 7 ? 'Every day' : n === 5 && !h.days[5] && !h.days[6] ? 'Weekdays' : `${n} days a week`))(h.days.filter(Boolean).length));
+
+// The round button on every habit row: logs a step, runs a timer, or (for quit habits) logs a slip.
 function checkButton(h, k, size = 46) {
-  const v = val(h, k), done = isDone(h, k);
-  return `<button class="h-check${done ? ' done' : ''}" data-step-habit="${h.id}" data-day="${k}" aria-label="Log ${esc(h.name)}">${ring(v / h.goal, size, 4)}<span class="h-check-in">${done ? checkSvg : '<b>+</b>'}</span></button>`;
+  const done = isDone(h, k);
+  if (isQuit(h)) {
+    return `<button class="h-check quit${done ? ' done' : ' slipped'}" data-slip="${h.id}" data-day="${k}" aria-label="${done ? 'Log a slip' : 'Undo slip'} for ${esc(h.name)}">${ring(done ? 1 : 0, size, 4, '#24b064')}<span class="h-check-in">${done ? `<b>${daysClean(h)}</b>` : '<b>!</b>'}</span></button>`;
+  }
+  if (h.kind === 'timer' && k === todayKey() && !done) {
+    const run = timing(h);
+    return `<button class="h-check timer${run ? ' running' : ''}" data-timer="${h.id}" aria-label="${run ? 'Stop' : 'Start'} timer for ${esc(h.name)}">${ring(liveVal(h, k) / h.goal, size, 4)}<span class="h-check-in">${run ? pauseSvg : playSvg}</span></button>`;
+  }
+  return `<button class="h-check${done ? ' done' : ''}" data-step-habit="${h.id}" data-day="${k}" aria-label="Log ${esc(h.name)}">${ring(val(h, k) / h.goal, size, 4)}<span class="h-check-in">${done ? checkSvg : '<b>+</b>'}</span></button>`;
 }
 const subText = (h, k) => {
   const v = val(h, k), done = isDone(h, k);
-  if (h.goal > 1 || h.kind === 'amount') return progressText(h, v);
-  return done ? 'Done' : h.note || TIMES[h.time].label;
+  if (isQuit(h)) return done ? `${daysClean(h)} day${daysClean(h) === 1 ? '' : 's'} clean` : 'Slipped today. Fresh start tomorrow';
+  if (h.kind === 'timer' && timing(h)) return `<span data-timer-live="${h.id}">${mmss(liveVal(h, k))}</span> of ${h.goal} min · running`;
+  const week = isWeekly(h) ? ` · ${weekCount(h, k)}/${h.perWeek} this week` : '';
+  if (h.goal > 1 || h.kind === 'amount') return progressText(h, v) + week;
+  return (done ? 'Done' : isWeekly(h) || h.freq === 'interval' ? freqText(h) : TIMES[h.time].label) + week;
 };
+// Day dots shared by the week strips: perfect, frozen, rest, or a progress ring.
+function dayDot(d, cls, ring_) {
+  if (perfect(d)) return `<span class="${cls} perfect">${checkSvg}</span>`;
+  if (isFrozen(d)) return `<span class="${cls} frozen" title="Saved by a freeze"><img src="${ICON('ice')}" alt="Freeze"></span>`;
+  if (isRest(d)) return `<span class="${cls} rest" title="Rest day"><img src="${ICON('beach-with-umbrella')}" alt="Rest"></span>`;
+  return ring_();
+}
 
 /* =========================================================================
    Sidebar
@@ -86,7 +114,7 @@ function renderHome() {
   $('#home-bubble').textContent = !s.total ? 'Plant a habit!' : s.done === 0 ? 'Let’s start small!' : s.done === s.total ? 'Perfect day!' : s.done / s.total >= 0.5 ? 'More than halfway!' : 'Nice start!';
 
   // stats
-  const w = habitById('water'), wv = w ? val(w, k) : 0, wg = w ? w.goal : 2.5;
+  const w = S().habits.find((h) => h.kind === 'amount'), wv = w ? val(w, k) : 0, wg = w ? w.goal : 2.5;
   countTo($('#st-water'), wv, 2);
   $('#st-water-goal').textContent = `of ${fmtNum(wg)} L`;
   $('#st-water-bar').style.width = Math.min(100, (wv / wg) * 100) + '%';
@@ -94,7 +122,8 @@ function renderHome() {
   countTo($('#st-sleep'), sl, 1);
   $('#st-sleep-bar').style.width = Math.min(100, (sl / 9) * 100) + '%';
   $('#st-sleep-sub').textContent = sl ? (sl >= 7 ? 'well rested' : 'a bit short') : 'tap to log';
-  const wo = habitById('workout'), ev = wo ? val(wo, k) : 0, eg = wo ? wo.goal : 30;
+  const mins = S().habits.filter((h) => h.kind === 'timer' || (h.unit === 'min' && !isQuit(h)));
+  const ev = Math.round(mins.reduce((a, h) => a + liveVal(h, k), 0)), eg = mins.filter((h) => scheduled(h, k)).reduce((a, h) => a + h.goal, 0) || 30;
   countTo($('#st-ex'), ev);
   $('#st-ex-bar').style.width = Math.min(100, (ev / eg) * 100) + '%';
   $('#st-ex-sub').textContent = `of ${eg} min`;
@@ -113,11 +142,19 @@ function renderHome() {
         <span class="h-text"><span class="h-t">${esc(h.name)}</span><span class="h-s">${subText(h, k)}</span></span>
         ${checkButton(h, k)}</a>`).join('');
   }).join('');
-  $('#home-groups').innerHTML = (list.length ? groups : emptyState('Plant your first habit', 'Tiny habits grow into big changes.')) +
-    (hidden ? `<div class="focus-note"><img src="${ICON('high-voltage')}" alt="">Focus mode is hiding ${hidden} finished habit${hidden > 1 ? 's' : ''}</div>` : '');
+  const quits = quitHabits(), rest = isRest(k);
+  const quitRows = quits.length ? `<div class="group-h"><img src="${ICON('prohibited')}" alt="">Breaking free<em></em></div>` + quits.map((h) => `<a class="habit quit-row${isDone(h, k) ? '' : ' slipped'}" href="#habits/${h.id}" style="--hc:${color(h)}">
+        <span class="h-ic"><img src="${ICON(h.icon)}" alt=""></span>
+        <span class="h-text"><span class="h-t">${esc(h.name)}</span><span class="h-s">${subText(h, k)}</span></span>
+        ${checkButton(h, k)}</a>`).join('') : '';
+  const restBanner = rest ? `<div class="rest-banner"><img src="${ICON('beach-with-umbrella')}" alt=""><span><b>Rest day</b>Nothing is due and your streak is safe. Log anything you like.</span><button class="link" data-action="toggle-rest">Undo</button></div>` : '';
+  const restRow = !rest && dueOn(k).length && !perfect(k) ? `<button class="rest-row" data-action="toggle-rest"><img src="${ICON('beach-with-umbrella')}" alt="">Not feeling it? Take a rest day</button>` : '';
+  $('#home-groups').innerHTML = restBanner + (list.length || quits.length ? groups + quitRows : emptyState('Plant your first habit', 'Tiny habits grow into big changes.')) +
+    (hidden ? `<div class="focus-note"><img src="${ICON('high-voltage')}" alt="">Focus mode is hiding ${hidden} finished habit${hidden > 1 ? 's' : ''}</div>` : '') + restRow;
   // group counts: done/total
   $$('#home-groups .group-h em').forEach((em, i) => {
     const t = TIME_ORDER.filter((x) => list.some((h) => h.time === x))[i];
+    if (!t) return;
     const items = list.filter((h) => h.time === t);
     em.textContent = `${items.filter((h) => isDone(h, k)).length}/${items.length}`;
   });
@@ -125,9 +162,9 @@ function renderHome() {
   // progress card
   $('#pc-ring').setAttribute('stroke-dasharray', `${s.total ? (s.done / s.total) * 315 : 0} 315`);
   $('#pc-count').textContent = `${s.done}/${s.total}`;
-  $('#pc-bar').innerHTML = list.map((h, i) => `<span class="seg${i < s.done ? ' on' : ''}" style="--d:${i * 60}ms">${i === s.done - 1 ? '<i></i>' : ''}</span>`).join('');
-  const left = s.total - s.done, next = list.find((h) => !isDone(h, k));
-  $('#pc-left').textContent = !s.total ? 'No habits yet' : left ? `${left} habit${left > 1 ? 's' : ''} left` : 'All done!';
+  $('#pc-bar').innerHTML = dueOn(k).map((h, i) => `<span class="seg${i < s.done ? ' on' : ''}" style="--d:${i * 60}ms">${i === s.done - 1 ? '<i></i>' : ''}</span>`).join('');
+  const left = s.total - s.done, next = dueOn(k).find((h) => !isDone(h, k)) || list.find((h) => !isDone(h, k) && !(isWeekly(h) && weekCount(h, k) >= h.perWeek));
+  $('#pc-left').textContent = rest ? 'Rest day' : !s.total ? (list.length ? 'Nothing due today' : 'No habits yet') : left ? `${left} habit${left > 1 ? 's' : ''} left` : 'All done!';
   $('#pc-next').innerHTML = next ? `<em>Next:</em>${esc(next.name)}` : '<em>Next:</em>Rest well';
 
   // up next
@@ -136,7 +173,7 @@ function renderHome() {
     un.style.setProperty('--hc', color(next));
     un.innerHTML = `<span class="un-ic"><img src="${ICON(next.icon)}" alt=""></span>
       <span class="un-t"><small>Up next</small><b>${esc(next.name)}</b><span>${next.remind ? `⏰ ${next.reminder}` : TIMES[next.time].label} · ${progressText(next, val(next, k))}</span></span>
-      <button class="un-btn" data-step-habit="${next.id}" data-day="${k}">${next.kind === 'amount' ? '+250 ml' : next.goal > 1 ? `+${fmtNum(next.step)}` : 'Done'}</button>`;
+      ${next.kind === 'timer' ? `<button class="un-btn" data-timer="${next.id}">${timing(next) ? 'Stop' : 'Start'}</button>` : `<button class="un-btn" data-step-habit="${next.id}" data-day="${k}">${next.kind === 'amount' ? '+250 ml' : next.goal > 1 ? `+${fmtNum(next.step)}` : 'Done'}</button>`}`;
   } else {
     un.style.setProperty('--hc', '#22ae63');
     un.innerHTML = `<span class="un-ic"><img src="${ICON(s.total ? 'sunflower' : 'seedling')}" alt=""></span>
@@ -150,8 +187,7 @@ function renderHome() {
     const ds = dayStats(d), lbl = fmtDay(d, { weekday: 'narrow' });
     let dot;
     if (d > k) dot = '<span class="d future"></span>';
-    else if (perfect(d)) dot = `<span class="d perfect" style="--dl:${i * 50}ms">${checkSvg}</span>`;
-    else dot = `<span class="d" style="--dl:${i * 50}ms">${ring(ds.total ? ds.done / ds.total : 0, 30, 4, 'var(--a)')}</span>`;
+    else dot = dayDot(d, 'd', () => `<span class="d" style="--dl:${i * 50}ms">${ring(ds.total ? ds.done / ds.total : 0, 30, 4, 'var(--a)')}</span>`);
     return `<span class="mw${d === k ? ' today' : ''}">${lbl}${dot}</span>`;
   }).join('');
 
@@ -174,7 +210,7 @@ function renderInsights() {
   const sunday = addDays(t, -dateOf(t).getDay());
   const days = Array.from({ length: 7 }, (_, i) => addDays(sunday, i));
   let runEnd = -1, runStart = -1;
-  days.forEach((k, i) => { if (k <= t && perfect(k)) { if (runStart < 0 || i !== runEnd + 1) runStart = i; runEnd = i; } });
+  days.forEach((k, i) => { if (k <= t && (perfect(k) || isFrozen(k))) { if (runStart < 0 || i !== runEnd + 1) runStart = i; runEnd = i; } });
   const current = runEnd >= 0 && (days[runEnd] === t || days[runEnd] === addDays(t, -1));
   const track = current ? `<span class="sk-track" style="left:${(runStart / 7) * 100}%;width:${((runEnd - runStart + 1) / 7) * 100}%"></span><span class="sk-line" style="left:${((runStart + 0.5) / 7) * 100}%;width:${((runEnd - runStart) / 7) * 100}%"></span>` : '';
   $('#sk-week').innerHTML = track + days.map((k, i) => {
@@ -182,11 +218,15 @@ function renderInsights() {
     let dot;
     if (k > t) dot = `<span class="num">${dateOf(k).getDate()}</span>`;
     else if (perfect(k)) dot = `<span class="dot${isT ? ' big' : ''}" style="--dl:${i * 70}ms">${checkSvg}</span>`;
+    else if (isFrozen(k)) dot = `<span class="dot ice" title="Saved by a freeze"><img src="${ICON('ice')}" alt="Freeze"></span>`;
+    else if (isRest(k)) dot = `<span class="dot rest" title="Rest day"><img src="${ICON('beach-with-umbrella')}" alt="Rest"></span>`;
     else if (isT) dot = `<span class="dot pending"><i style="--p:${ts.total ? ts.done / ts.total : 0}"></i></span>`;
     else dot = '<span class="dot miss"></span>';
     return `<div class="sk-day${isT ? ' today' : ''}"><span class="sk-l">${fmtDay(k, { weekday: 'short' })}</span><span class="sk-cell">${dot}</span></div>`;
   }).join('');
-  $('#sk-foot').textContent = `${ts.done} of ${ts.total} habits done today`;
+  const fz = S().freezes;
+  $('#sk-foot').innerHTML = `${isRest(t) ? 'Rest day today' : `${ts.done} of ${ts.total} habits done today`}<span class="sk-freeze" title="Every 7-day streak earns a freeze, up to 3. A freeze saves your streak on a missed day."><img src="${ICON('ice')}" alt="">${fz} freeze${fz === 1 ? '' : 's'}</span>`;
+  if (currentSection === 'insights' || !currentSection) renderPatterns();   // ~10 ms of statistics: only when it's on screen
 
   // week score
   let sched = 0, done = 0;
@@ -236,6 +276,7 @@ function renderInsights() {
       const k = addDays(first, i), s = dayStats(k), d = i + 1;
       if (k > t) return `<span class="md future">${d}</span>`;
       if (perfect(k)) return `<span class="md perfect${k === t ? ' today' : ''}" style="--dl:${i * 15}ms">${d}<img src="${ICON('sunflower')}" alt=""></span>`;
+      if (isFrozen(k) || isRest(k)) return `<span class="md ${isRest(k) ? 'rest' : 'frozen'}${k === t ? ' today' : ''}" style="--dl:${i * 15}ms">${d}<img src="${ICON(isRest(k) ? 'beach-with-umbrella' : 'ice')}" alt=""></span>`;
       return `<span class="md${k === t ? ' today' : ''}" style="--dl:${i * 15}ms">${d}<i><b style="width:${s.total ? (s.done / s.total) * 100 : 0}%"></b></i></span>`;
     }).join('');
 
@@ -243,6 +284,29 @@ function renderInsights() {
   countTo($('#tot-perfect'), tt.perfectDays);
   countTo($('#tot-best'), bestStreak());
 }
+// Patterns: local statistics always; the buddy's write-up on top when there's an API key.
+let insightBusy = false;
+function renderPatterns() {
+  const found = patterns(), box = $('#patterns'), ai = S().insight, k = todayKey();
+  const list = found.map((f) => `<li><img src="${ICON(f.icon)}" alt=""><span>${esc(f.text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}</span></li>`).join('');
+  const canAsk = !!getKey() && found.length;
+  $('#patterns-ask').hidden = !canAsk;
+  $('#patterns-ask').disabled = insightBusy;
+  $('#patterns-ask span').textContent = insightBusy ? 'Thinking…' : ai && ai.date === k ? 'Ask again' : `Ask ${buddy().name}`;
+  box.innerHTML = !found.length
+    ? `<p class="pt-empty"><img src="${ICON('magnifying-glass-tilted-left')}" alt="">Keep logging for about two weeks${Object.keys(S().sleep).length ? '' : ' (and log your sleep)'} and patterns in your days will show up here.</p>`
+    : `<ul class="pt-list">${list}</ul>` + (ai && ai.html ? `<div class="pt-ai"><span class="pt-ai-h"><img src="${ICON(S().buddy)}" alt="">${buddy().name}’s read${ai.date === k ? '' : ` · ${fmtDay(ai.date, { day: 'numeric', month: 'short' })}`}</span><div class="m-md">${ai.html}</div></div>` : '');
+}
+async function askInsights() {
+  if (insightBusy) return;
+  insightBusy = true; renderPatterns();
+  try {
+    const html = await writeInsights(patterns());
+    S().insight = { date: todayKey(), html }; save(); sound('soft');
+  } catch (e) { toast('Couldn’t reach your buddy just now', 'cloud'); }
+  insightBusy = false; renderPatterns();
+}
+
 const titleFor = (lv) => (lv >= 10 ? 'Habit Legend' : lv >= 5 ? 'Habit Hero' : lv >= 3 ? 'Rising Star' : 'Sprout');
 
 /* =========================================================================
@@ -282,14 +346,16 @@ function renderHabits() {
   let items = list.filter((h) => filter === 'all' || h.time === filter);
   const hidden = S().settings.focus ? items.filter((h) => isDone(h, k)).length : 0;
   if (S().settings.focus) items = items.filter((h) => !isDone(h, k) || h.id === selId);
-  const unscheduled = S().habits.filter((h) => !list.includes(h) && (filter === 'all' || h.time === filter));
-  if (!selId || !habitById(selId)) selId = (items[0] || list[0] || S().habits[0] || {}).id || null;
+  const quits = quitHabits().filter((h) => filter === 'all' || h.time === filter);
+  const unscheduled = S().habits.filter((h) => !isQuit(h) && !list.includes(h) && (filter === 'all' || h.time === filter));
+  if (!selId || !habitById(selId)) selId = (items[0] || list[0] || quits[0] || S().habits[0] || {}).id || null;
   const row = (h, off) => `<a class="li${h.id === selId ? ' sel' : ''}${isDone(h, k) ? ' is-done' : ''}${justChanged(h) ? ' just' : ''}" href="#habits/${h.id}" style="--hc:${color(h)}${off ? ';opacity:.55' : ''}">
       <span class="h-ic"><img src="${ICON(h.icon)}" alt=""></span>
-      <span class="li-text"><b>${esc(h.name)}</b><span><img src="${ICON(TIMES[h.time].icon)}" alt="">${off ? 'Not scheduled' : subText(h, k)}<span class="li-streak"><img src="${ICON('fire')}" alt="">${habitStreak(h)}</span></span></span>
-      ${off || k > t ? '' : checkButton(h, k, 42)}</a>`;
+      <span class="li-text"><b>${esc(h.name)}</b><span><img src="${ICON(TIMES[h.time].icon)}" alt="">${off ? 'Not scheduled' : subText(h, k)}${isQuit(h) ? '' : `<span class="li-streak"><img src="${ICON('fire')}" alt="">${habitStreak(h)}${isWeekly(h) ? 'w' : ''}</span>`}</span></span>
+      ${off || k > t || (isQuit(h) && k < h.created) ? '' : checkButton(h, k, 42)}</a>`;
   $('#habit-list').innerHTML = items.map((h) => row(h)).join('') +
     (hidden ? `<div class="focus-note"><img src="${ICON('high-voltage')}" alt="">${hidden} finished habit${hidden > 1 ? 's' : ''} hidden</div>` : '') +
+    quits.map((h) => row(h)).join('') +
     unscheduled.map((h) => row(h, true)).join('') +
     `<a class="li li-add" href="#new"><span>+</span>New habit</a>`;
   renderDetail();
@@ -300,19 +366,36 @@ function renderDetail(animate) {
   $('#detail-inner').hidden = !h;
   $('#detail-empty').hidden = !!h;
   if (!h) return;
-  const t = todayKey(), k = viewDay, v = val(h, k), done = isDone(h, k), pct = Math.min(1, v / h.goal);
+  const t = todayKey(), k = viewDay, v = liveVal(h, k), done = isDone(h, k), quit = isQuit(h);
+  const pct = quit ? (done ? 1 : 0) : Math.min(1, v / h.goal);
   const box = $('#detail');
   box.style.setProperty('--hc', color(h));
   $('#d-icon').src = ICON(h.icon);
   $('#d-name').textContent = h.name;
   $('#d-time').innerHTML = `<img src="${ICON(TIMES[h.time].icon)}" alt="">${TIMES[h.time].label}`;
-  const days = h.days.filter(Boolean).length;
-  $('#d-days').innerHTML = `<img src="${ICON('calendar')}" alt="">${days === 7 ? 'Every day' : days + ' days a week'}`;
-  $('#d-wave').style.setProperty('--fill', pct);
-  countTo($('#d-pct'), Math.round(pct * 100), 0, '%');
+  $('#d-days').innerHTML = `<img src="${ICON(h.freq === 'days' ? 'calendar' : 'repeat-button')}" alt="">${freqText(h)}`;
+  $('#d-wave').style.setProperty('--fill', quit ? Math.min(1, daysClean(h) / 30) : pct);
+  countTo($('#d-pct'), quit ? daysClean(h) : Math.round(pct * 100), 0, quit ? 'd' : '%');
   $('#d-day-label').textContent = k === t ? 'Today' : fmtDay(k, { weekday: 'long', day: 'numeric', month: 'short' });
-  $('#d-count').textContent = progressText(h, v);
-  if (h.kind === 'amount') {
+  $('#d-count').innerHTML = quit ? (done ? 'Clean' : 'Slipped') : isWeekly(h) ? `${weekCount(h, k)} of ${h.perWeek} this week` :
+    h.kind === 'timer' ? `<span data-timer-live="${h.id}">${timing(h) ? mmss(v) : fmtNum(Math.round(v))}</span> of ${h.goal} min` : progressText(h, v);
+  const special = $('#d-special');
+  special.innerHTML = '';
+  if (quit) {
+    $('#d-units').innerHTML = ''; $('#d-amounts').innerHTML = '';
+    const n = daysClean(h), best = habitBest(h);
+    special.innerHTML = `<div class="quit-hero${done ? '' : ' slipped'}"><b>${n}</b><span>day${n === 1 ? '' : 's'} clean${best > n ? ` · best ${best}` : ''}</span>
+      <p>${done ? (n >= best && n > 2 ? 'Your longest run yet. Keep going!' : 'Every clean day counts.') : 'One slip doesn’t undo your progress. Fresh start tomorrow.'}</p></div>`;
+  } else if (h.kind === 'timer') {
+    $('#d-units').innerHTML = ''; $('#d-amounts').innerHTML = '';
+    const run = timing(h);
+    special.innerHTML = `<div class="timer-box${run ? ' running' : ''}">
+      <span class="timer-face">${ring(Math.min(1, v / h.goal), 132, 10)}<b data-timer-live="${h.id}" data-timer-fmt="clock">${mmss(v)}</b></span>
+      <div class="timer-ctl">
+        ${k === t ? `<button class="timer-go" data-timer="${h.id}">${run ? pauseSvg + 'Stop' : playSvg + (v > 0 ? 'Resume' : 'Start')}</button>` : ''}
+        <div class="timer-adj"><button class="amt minus" data-minutes="-5" aria-label="Remove 5 minutes">−5</button><button class="amt" data-minutes="5">+5 min</button><button class="amt" data-minutes="${h.goal}">Full ${h.goal}</button></div>
+      </div></div>`;
+  } else if (h.kind === 'amount') {
     $('#d-units').innerHTML = '';
     $('#d-amounts').innerHTML = `
       <div class="litre-gauge"><i style="width:${pct * 100}%"></i>${[0.25, 0.5, 0.75].map((m) => `<span class="tick" style="left:${m * 100}%"></span>`).join('')}</div>
@@ -328,9 +411,12 @@ function renderDetail(animate) {
       `<button class="unit${i < filled ? ' on' : ''}${justChanged(h) && i === filled - 1 ? ' pop' : ''}" data-unit="${i}"><img src="${ICON(h.unitIcon || h.icon)}" alt=""><em>${fmtNum((i + 1) * h.step)}${steps > 1 ? '' : ' ' + h.unit}</em></button>`).join('');
   }
   const log = $('#d-log');
-  log.disabled = k > t;
-  log.textContent = done ? 'Done for the day' : h.kind === 'amount' ? 'Log 250 ml' : h.goal === 1 ? 'Mark as done' : `Log ${fmtNum(h.step)} ${h.unit}`;
-  log.classList.toggle('is-done', done);
+  log.hidden = h.kind === 'timer';
+  log.disabled = k > t || (quit && k < h.created);
+  log.textContent = quit ? (done ? 'I slipped' : 'Undo slip') : done ? 'Done for the day' : h.kind === 'amount' ? 'Log 250 ml' : h.goal === 1 ? 'Mark as done' : `Log ${fmtNum(h.step)} ${h.unit}`;
+  log.classList.toggle('is-done', done && !quit);
+  log.classList.toggle('slip', quit && done);
+  $('#d-streak-l').textContent = quit ? 'days clean' : isWeekly(h) ? 'week streak' : 'day streak';
   countTo($('#d-streak'), habitStreak(h));
   countTo($('#d-best'), habitBest(h));
   countTo($('#d-rate'), habitRate(h), 0, '%');
@@ -341,9 +427,12 @@ function renderDetail(animate) {
   $('#d-heat').innerHTML = cells.map((c, i) => {
     if (c > t) return '<i class="lv-1"></i>';
     if (!scheduled(h, c)) return '<i class="lvx"></i>';
+    if (isRest(c)) return `<i class="lv-rest" title="Rest day"></i>`;
+    if (quit) return `<i class="${isDone(h, c) ? 'lv3' : 'lv-slip'}${c === k ? ' today' : ''}" style="--dl:${i * 12}ms"></i>`;
     const p = val(h, c) / h.goal, lv = p >= 1 ? 3 : p >= 0.5 ? 2 : p > 0 ? 1 : 0;
     return `<i class="lv${lv}${c === k ? ' today' : ''}" style="--dl:${i * 12}ms" title="${fmtDay(c, { day: 'numeric', month: 'short' })}"></i>`;
   }).join('');
+  renderNotes(h, k);
   $('#d-remind-time').value = h.reminder || '08:00';
   $('#d-remind-switch').setAttribute('aria-pressed', !!h.remind);
 
@@ -351,6 +440,74 @@ function renderDetail(animate) {
     $$('#detail-inner > *').forEach((el, i) => el.animate([{ opacity: 0, transform: 'translateX(26px)' }, { opacity: 1, transform: 'none' }],
       { duration: 420, delay: i * 45, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }));
   }
+}
+
+// Notes & mood for one habit on one day, plus the latest notes.
+function renderNotes(h, k) {
+  const n = noteOf(h, k) || { mood: 0, text: '' }, t = todayKey();
+  $('#d-note-day').textContent = k === t ? 'Today' : fmtDay(k, { weekday: 'short', day: 'numeric', month: 'short' });
+  $('#d-moods').innerHTML = MOODS.map((m) => `<button class="mood${n.mood === m.v ? ' on' : ''}" data-mood="${m.v}" aria-label="${m.label}"><img src="${ICON(m.icon)}" alt=""><span>${m.label}</span></button>`).join('');
+  const ta = $('#d-note');
+  if (document.activeElement !== ta) ta.value = n.text || '';
+  ta.disabled = k > t;
+  const recent = Object.keys(S().notes).filter((d) => d !== k && S().notes[d][h.id]).sort().reverse().slice(0, 4);
+  $('#d-note-list').innerHTML = recent.map((d) => {
+    const x = S().notes[d][h.id], m = MOODS.find((y) => y.v === x.mood);
+    return `<div class="note-row">${m ? `<img src="${ICON(m.icon)}" alt="${m.label}">` : '<span class="note-dot"></span>'}<span><b>${fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' })}</b>${esc(x.text || m.label)}</span></div>`;
+  }).join('');
+}
+
+/* =========================================================================
+   Timers, slips & rest days
+   ========================================================================= */
+function stopTimer(silent) {
+  const tm = S().timer; if (!tm) return;
+  const h = habitById(tm.id); S().timer = null;
+  if (!h) { save(); return; }
+  const min = (Date.now() - tm.start) / 60000;
+  const add = min < 0.33 ? 0 : Math.max(1, Math.round(min));
+  if (add) setValue(h, tm.day, val(h, tm.day) + add);
+  else { save(); renderAll(); }
+  if (!silent && add) toast(`${add} min of ${h.name} logged`, h.unitIcon || h.icon);
+}
+function toggleTimer(h) {
+  if (timing(h)) { stopTimer(); return; }
+  if (S().timer) stopTimer(true);
+  S().timer = { id: h.id, day: todayKey(), start: Date.now(), cheered: isDone(h, todayKey()) };
+  selId = h.id; save(); renderAll(); sound('pop'); buzz(10);
+  toast(`${h.name} timer started`, h.unitIcon || h.icon);
+}
+// Ticks once a second while a timer runs: live clocks and rings, a cheer when the goal is reached.
+setInterval(() => {
+  const tm = S().timer; if (!tm) return;
+  const h = habitById(tm.id); if (!h) { S().timer = null; return; }
+  const v = liveVal(h, tm.day);
+  $$(`[data-timer-live="${h.id}"]`).forEach((el) => { el.textContent = mmss(v); });
+  $$(`[data-timer="${h.id}"] circle:last-child, .timer-face circle:last-child`).forEach((c) => {
+    const C = 2 * Math.PI * +c.getAttribute('r'); c.setAttribute('stroke-dasharray', `${C * Math.min(1, v / h.goal)} ${C}`);
+  });
+  if (selId === h.id && currentSection === 'habits' && viewDay === tm.day) {
+    $('#d-wave').style.setProperty('--fill', Math.min(1, v / h.goal));
+    const el = $('#d-pct'); el._count = (el._count || 0) + 1; el.dataset.v = Math.round(Math.min(1, v / h.goal) * 100); el.textContent = el.dataset.v + '%';
+  }
+  if (!tm.cheered && v >= h.goal) { tm.cheered = true; save(); sound('perfect'); buzz(30); toast(`${h.goal} minutes! Stop whenever you’re done`, 'timer-clock'); }
+}, 1000);
+
+function slip(h, k) {
+  if (!isDone(h, k)) { setVal(h, k, 0); save(); renderAll(); toast('Slip removed. Still going strong', 'sparkles'); sound('pop'); return; }
+  const n = daysClean(h);
+  openDialog(`<div class="sh-hero"><img class="sh-big" src="${ICON(h.icon)}" alt=""></div>
+    <h3 class="sh-title">Log a slip?</h3><p class="sh-sub">You’ve been clean for ${n} day${n === 1 ? '' : 's'}. A slip resets the counter, not your progress. Be kind to yourself.</p>
+    <div class="sh-pair"><button class="sh-btn ghost" data-action="close">Not today</button><button class="sh-btn" data-action="confirm-slip" data-id="${h.id}" data-day="${k}">Log slip</button></div>`);
+}
+function toggleRest(k = todayKey()) {
+  if (S().rest[k]) { delete S().rest[k]; toast('Rest day removed', 'calendar'); }
+  else { S().rest[k] = true; toast('Rest day. Your streak is safe', 'beach-with-umbrella'); }
+  save(); renderAll(); sound('pop');
+}
+function settle() {
+  const used = settleDays();
+  if (used.length) { save(); setTimeout(() => toast(used.length > 1 ? `${used.length} freezes saved your streak` : `A freeze saved your ${streak()}-day streak`, 'ice'), 1200); }
 }
 
 /* =========================================================================
@@ -381,6 +538,7 @@ const chatOps = {
   theme: applyTheme,
   setReminders,
   go: (hash) => { location.hash = hash; },
+  timer: (h, action) => { if ((action === 'start') !== !!timing(h)) toggleTimer(h); },
   reset: () => { const s = S(); store.state = blankState({ name: s.name, buddy: s.buddy, settings: s.settings, installDismissed: s.installDismissed, chat: s.chat }); selId = null; save(); renderAll(); },
 };
 async function userSays(text, img) {
@@ -436,7 +594,22 @@ function renderAll() {
    Editor (form sheet)
    ========================================================================= */
 let draft = null;
-const newDraft = () => ({ id: null, name: '', icon: 'running-shoe', unitIcon: 'running-shoe', color: 1, time: 'morning', goal: 1, step: 1, unit: 'times', kind: 'count', days: [1, 1, 1, 1, 1, 1, 1], reminder: '08:00', remind: false });
+const newDraft = () => ({ id: null, name: '', icon: 'running-shoe', unitIcon: 'running-shoe', color: 1, time: 'morning', goal: 1, step: 1, unit: 'times', kind: 'count',
+  freq: 'days', every: 2, perWeek: 3, days: [1, 1, 1, 1, 1, 1, 1], reminder: '08:00', remind: false });
+const TYPE_HINTS = {
+  count: 'Tap to check it off, or count up to a goal.',
+  amount: 'Fill a water tank in litres, 250 ml at a time.',
+  timer: 'Start a timer when you begin; the minutes are logged when you stop.',
+  quit: 'For habits you’re breaking. Counts the days since your last slip.',
+};
+function setType(kind) {
+  if (draft.kind === kind) return;
+  draft.kind = kind;
+  if (kind === 'amount') Object.assign(draft, { goal: 2.5, step: 0.25, unit: 'L', unitIcon: 'droplet' });
+  else if (kind === 'timer') Object.assign(draft, { goal: 10, step: 5, unit: 'min', unitIcon: 'stopwatch' });
+  else if (kind === 'quit') Object.assign(draft, { goal: 1, step: 1, unit: 'day', freq: 'days', days: [1, 1, 1, 1, 1, 1, 1] });
+  else Object.assign(draft, { goal: 1, step: 1, unit: 'times', unitIcon: draft.icon });
+}
 function renderEditor() {
   const ed = $('#editor');
   ed.style.setProperty('--hc', COLORS[draft.color]);
@@ -453,8 +626,21 @@ function renderEditor() {
   $('#n-icons').innerHTML = group.icons.map((ic) => `<button class="pick${ic === draft.icon ? ' on' : ''}" data-icon="${ic}"><img src="${ICON(ic)}" alt="" loading="lazy"></button>`).join('');
   $('#n-colors').innerHTML = COLORS.map((c, i) => `<button class="swatch${i === draft.color ? ' on' : ''}" data-color="${i}" style="--sw:${c}" aria-label="Colour ${i + 1}"></button>`).join('');
   $$('#n-times .time-opt').forEach((b) => b.classList.toggle('on', b.dataset.time === draft.time));
+  $$('#n-types [data-type]').forEach((b) => b.classList.toggle('on', b.dataset.type === draft.kind));
+  $('#n-type-hint').textContent = TYPE_HINTS[draft.kind];
+  const quit = draft.kind === 'quit';
+  $('#n-repeat-wrap').hidden = quit;
+  $('#n-goal-h').hidden = quit; $('#n-goal-row').hidden = quit;
+  $('#n-goal-h').textContent = draft.freq === 'weekly' ? 'Goal per session' : 'Daily goal';
+  $$('#n-freqs [data-freq]').forEach((b) => b.classList.toggle('on', b.dataset.freq === draft.freq));
+  $('#n-days').hidden = draft.freq !== 'days';
+  $('#n-freq-step').hidden = draft.freq === 'days';
+  $('#n-freq-label').textContent = draft.freq === 'interval' ? `Every ${draft.every || 2} days` : `${draft.perWeek || 3}× a week`;
   $('#n-days').innerHTML = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => `<button class="day${draft.days[i] ? ' on' : ''}" data-dayi="${i}">${d}</button>`).join('');
-  if (draft.kind === 'amount') {
+  if (draft.kind === 'timer') {
+    $('#n-goal').textContent = `${draft.goal} min`;
+    $('#n-goal-pips').innerHTML = `<img src="${ICON('timer-clock')}" alt="">`;
+  } else if (draft.kind === 'amount') {
     $('#n-goal').textContent = `${fmtNum(draft.goal)} L`;
     $('#n-goal-pips').innerHTML = `<span class="mini-gauge"><i style="width:${(draft.goal / 4) * 100}%"></i></span>`;
   } else {
@@ -464,9 +650,9 @@ function renderEditor() {
   }
   $('#n-remind-time').value = draft.reminder;
   $('#n-remind-switch').setAttribute('aria-pressed', !!draft.remind);
-  const days = draft.days.filter(Boolean).length;
-  $('#n-preview-meta').innerHTML = `<img src="${ICON(TIMES[draft.time].icon)}" alt="">${TIMES[draft.time].label} · ${days === 7 ? 'Every day' : days ? days + ' days a week' : 'No days picked'}`;
-  $('#n-save').disabled = !days;
+  const days = draft.days.filter(Boolean).length, ok = quit || draft.freq !== 'days' || days;
+  $('#n-preview-meta').innerHTML = `<img src="${ICON(TIMES[draft.time].icon)}" alt="">${TIMES[draft.time].label} · ${ok ? freqText(draft) : 'No days picked'}${quit ? ' · quit' : draft.kind === 'timer' ? ' · timer' : ''}`;
+  $('#n-save').disabled = !ok;
 }
 function openEditor(h) {
   draft = h ? JSON.parse(JSON.stringify(h)) : newDraft();
@@ -486,7 +672,7 @@ function closeEditor() {
 }
 function saveDraft() {
   const name = $('#n-name').value.trim() || IDEAS.find((i) => i.icon === draft.icon)?.name || 'New habit';
-  if (!draft.days.some(Boolean)) return;
+  if (draft.kind !== 'quit' && draft.freq === 'days' && !draft.days.some(Boolean)) return;
   if (draft.id) {
     Object.assign(habitById(draft.id), { ...draft, name });
     save(); closeEditor(); renderAll();
@@ -516,7 +702,10 @@ function setValue(h, k, v, ev) {
     const [x, y] = stagePoint(ev);
     confetti(x, y); sound('done'); buzz(20);
     const after = snapshot();
-    if (k === todayKey() && !before.perfect && after.perfect) setTimeout(celebrateDay, 450);
+    if (k === todayKey() && !before.perfect && after.perfect) {
+      setTimeout(celebrateDay, 450);
+      if (maybeEarnFreeze()) { save(); setTimeout(() => toast(`7 more days! You earned a streak freeze (${S().freezes}/3)`, 'ice'), 3600); }
+    }
     else toast(`${h.name} done!`, h.icon);
     if (after.level > before.level) setTimeout(() => levelUp(after.level), 900);
     after.badges.filter((b) => !before.badges.includes(b)).forEach((id, i) => {
@@ -526,6 +715,7 @@ function setValue(h, k, v, ev) {
   } else if (val(h, k) > 0) { sound('pop'); buzz(8); } else sound('undo');
 }
 function stepHabit(h, k, ev) {
+  if (isQuit(h)) return slip(h, k);
   if (isDone(h, k)) return setValue(h, k, 0, ev);
   setValue(h, k, val(h, k) + stepOf(h), ev);
   if (h.kind === 'amount' && currentSection === 'habits' && h.id === selId) splash(0.25);
@@ -622,7 +812,7 @@ function renderSearch(q) {
   const res = S().habits.filter((h) => h.name.toLowerCase().includes(qq));
   kbIndex = 0;
   $('#search-results').innerHTML = res.map((h, i) => `<a class="s-row${i === 0 ? ' kb' : ''}" href="#habits/${h.id}" style="--hc:${color(h)};--dl:${i * 30}ms">
-      <span class="s-ic"><img src="${ICON(h.icon)}" alt=""></span><span class="s-t"><b>${esc(h.name)}</b><span>${TIMES[h.time].label} · ${progressText(h, val(h, k))}</span></span>
+      <span class="s-ic"><img src="${ICON(h.icon)}" alt=""></span><span class="s-t"><b>${esc(h.name)}</b><span>${TIMES[h.time].label} · ${subText(h, k)}</span></span>
       ${isDone(h, k) ? `<span class="s-done">${checkSvg}</span>` : ''}</a>`).join('') +
     (qq ? `<a class="s-row s-new${res.length ? '' : ' kb'}" href="#new" data-prefill="${esc(q.trim())}"><span class="s-ic"><img src="${ICON('seedling')}" alt=""></span><span class="s-t"><b>Create “${esc(q.trim())}”</b><span>Plant it as a new habit</span></span></a>` :
       !res.length ? '<p class="s-empty">No habits yet</p>' : '');
@@ -716,10 +906,12 @@ function show(target) {
   const prev = currentSection;
   if (target === 'habits') renderHabits();
   if (target === 'buddy') renderBuddyScreen();
+  if (target === 'insights') renderPatterns();
   $$('.nav').forEach((a, i) => { const on = SECTIONS[i] === target; a.classList.toggle('active', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   $('.side-nav').style.setProperty('--i', SECTIONS.indexOf(target));
   if (prev === target) return;
   currentSection = target;
+  document.title = target === 'home' ? 'Habie · Today' : `Habie · ${{ insights: 'Insights', habits: 'Habits', buddy: buddy().name, settings: 'Settings' }[target]}`;
   const next = $(`.screen[data-route="${target}"]`), old = prev && $(`.screen[data-route="${prev}"]`);
   $$('.screen').forEach((s) => { if (s !== next && s !== old) { s.classList.remove('active'); s.setAttribute('inert', ''); } });
   next.classList.add('active'); next.removeAttribute('inert');
@@ -749,6 +941,31 @@ document.addEventListener('click', (e) => {
     if ($('#editor').classList.contains('open') && e.target !== modal) closeEditor();
     closeOverlays(); return;
   }
+  if ((t = el('[data-timer]'))) {
+    e.preventDefault(); e.stopPropagation();
+    const h = habitById(t.dataset.timer); if (h) toggleTimer(h); return;
+  }
+  if ((t = el('[data-slip]'))) {
+    e.preventDefault(); e.stopPropagation();
+    const h = habitById(t.dataset.slip); if (h) slip(h, t.dataset.day || todayKey()); return;
+  }
+  if ((t = el('[data-minutes]'))) {
+    const h = habitById(selId), m = +t.dataset.minutes;
+    if (h) setValue(h, viewDay, m === h.goal ? h.goal : val(h, viewDay) + m, e); return;
+  }
+  if ((t = el('[data-mood]'))) {
+    const h = habitById(selId), m = +t.dataset.mood;
+    if (h && viewDay <= todayKey()) { setNote(h, viewDay, { mood: noteOf(h, viewDay)?.mood === m ? 0 : m, text: $('#d-note').value }); save(); renderNotes(h, viewDay); sound('tap'); bounce(`[data-mood="${m}"] img`); }
+    return;
+  }
+  if ((t = el('[data-type]'))) { setType(t.dataset.type); renderEditor(); sound('tap'); return; }
+  if ((t = el('[data-freq]'))) { draft.freq = t.dataset.freq; renderEditor(); sound('tap'); return; }
+  if ((t = el('[data-freq-step]'))) {
+    const d = +t.dataset.freqStep;
+    if (draft.freq === 'interval') draft.every = Math.max(2, Math.min(30, (draft.every || 2) + d));
+    else draft.perWeek = Math.max(1, Math.min(6, (draft.perWeek || 3) + d));
+    renderEditor(); sound('tap'); return;
+  }
   if ((t = el('[data-step-habit]'))) {
     e.preventDefault(); e.stopPropagation();
     const h = habitById(t.dataset.stepHabit);
@@ -776,6 +993,7 @@ document.addEventListener('click', (e) => {
   if ((t = el('[data-idea]'))) {
     const idea = IDEAS[+t.dataset.idea];
     Object.assign(draft, { name: idea.name, icon: idea.icon, unitIcon: idea.icon, time: idea.time, color: idea.color });
+    iconGroup = (ICON_GROUPS.find((g) => g.icons.includes(idea.icon)) || ICON_GROUPS[0]).id;
     $('#n-name').value = idea.name; renderEditor(); bounce('#n-preview-icon'); sound('pop'); return;
   }
   if ((t = el('[data-color]'))) { draft.color = +t.dataset.color; renderEditor(); sound('tap'); return; }
@@ -784,6 +1002,7 @@ document.addEventListener('click', (e) => {
   if ((t = el('[data-step]'))) {
     const d = +t.dataset.step;
     if (draft.kind === 'amount') draft.goal = Math.max(0.5, Math.min(4, draft.goal + d * 0.25));
+    else if (draft.kind === 'timer') draft.goal = Math.max(5, Math.min(180, draft.goal + d * 5));
     else draft.goal = Math.max(draft.step, Math.min(draft.step * 10, draft.goal + d * draft.step));
     renderEditor(); sound('tap'); return;
   }
@@ -827,11 +1046,19 @@ document.addEventListener('click', (e) => {
       S().sleep[addDays(todayKey(), -1)] = v; save(); closeOverlays(); renderAll();
       toast(`${fmtNum(v)}h of sleep logged`, 'crescent-moon'); sound('done'); break;
     }
-    case 'open-water': location.hash = habitById('water') ? '#habits/water' : '#new'; break;
-    case 'open-workout': location.hash = habitById('workout') ? '#habits/workout' : '#new'; break;
+    case 'open-water': { const w = S().habits.find((x) => x.kind === 'amount'); location.hash = w ? `#habits/${w.id}` : '#new'; break; }
+    case 'open-workout': { const w = S().habits.find((x) => x.kind === 'timer' || x.unit === 'min'); location.hash = w ? `#habits/${w.id}` : '#new'; break; }
     case 'log':
-      if (h && !isDone(h, viewDay)) { setValue(h, viewDay, val(h, viewDay) + stepOf(h), e); if (h.kind === 'amount') splash(0.25); }
+      if (h && isQuit(h)) slip(h, viewDay);
+      else if (h && !isDone(h, viewDay)) { setValue(h, viewDay, val(h, viewDay) + stepOf(h), e); if (h.kind === 'amount') splash(0.25); }
       break;
+    case 'confirm-slip': {
+      const x = habitById(t.dataset.id); if (!x) break;
+      setVal(x, t.dataset.day, 1); save(); closeOverlays(); renderAll();
+      toast('Logged. Tomorrow is a fresh start', 'seedling'); sound('undo'); break;
+    }
+    case 'toggle-rest': toggleRest(); break;
+    case 'ask-insights': askInsights(); break;
     case 'edit-habit': if (h) location.hash = `#edit/${h.id}`; break;
     case 'reset-day': if (h) { setValue(h, viewDay, 0); toast('Progress reset', 'hourglass-not-done'); } break;
     case 'delete-habit': {
@@ -938,6 +1165,12 @@ async function share(text) {
 // Inputs
 $('#n-name').addEventListener('input', (e) => { draft.name = e.target.value; });
 $('#n-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveDraft(); });
+let noteTimer;
+$('#d-note').addEventListener('input', (e) => {
+  clearTimeout(noteTimer);
+  noteTimer = setTimeout(() => { const h = habitById(selId); if (h) { setNote(h, viewDay, { text: e.target.value }); save(); } }, 400);
+});
+$('#d-note').addEventListener('blur', () => { const h = habitById(selId); if (h) renderNotes(h, viewDay); });
 $('#n-remind-time').addEventListener('change', (e) => { draft.reminder = e.target.value || '08:00'; draft.remind = true; renderEditor(); });
 $('#d-remind-time').addEventListener('change', (e) => {
   const h = habitById(selId); if (!h) return;
@@ -1019,14 +1252,15 @@ if (screen.orientation) screen.orientation.addEventListener('change', fit);
 addEventListener('hashchange', route);
 let lastDay = todayKey();
 setInterval(() => {
-  if (todayKey() !== lastDay) { lastDay = todayKey(); viewDay = lastDay; renderAll(); }
+  if (todayKey() !== lastDay) { lastDay = todayKey(); viewDay = lastDay; settle(); renderAll(); }
   checkReminders();
 }, 30000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderAll(); checkReminders(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { settle(); renderAll(); checkReminders(); } });
 
 $('#sb-date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 applyTheme();
 fit();
+settle();
 renderAll();
 save();                                    // persist the new garden on first launch
 route();

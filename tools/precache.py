@@ -6,9 +6,9 @@ It also bumps the cache version so installed apps pick up the change.
 import hashlib, json, pathlib, re
 
 root = pathlib.Path(__file__).resolve().parent.parent
-files = ['./', 'index.html', 'styles.css', 'config.js', 'manifest.webmanifest']
+files = ['./', 'index.html', 'styles.css', 'config.js', 'manifest.webmanifest', 'favicon.ico']
 files += sorted(str(p.relative_to(root)) for d in ('js', 'assets') for p in (root / d).rglob('*')
-                if p.is_file() and p.name != 'LICENSE' and not {'splash', 'screenshots'} & set(p.parts))
+                if p.is_file() and p.name not in ('LICENSE', 'og.png') and not p.name.startswith('LICENSE') and not {'splash', 'screenshots'} & set(p.parts))
 digest = hashlib.sha1()
 for f in files[1:]:
     digest.update((root / f).read_bytes())

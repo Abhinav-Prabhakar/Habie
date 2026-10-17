@@ -5,6 +5,7 @@ import { CONFIG } from '../config.js';
 import {
   store, ICON, TIMES, TIME_ORDER, IDEAS, NEW_ICONS, COLORS, ACCENTS, BUDDIES, todayKey, addDays, monIndex, habitsOn, isDone, val,
   habitById, dayStats, streak, bestStreak, habitStreak, habitRate, totals, unlocked, BADGES, fmtNum, buddy, color,
+  isQuit, isWeekly, isRest, daysClean, weekCount, noteOf, setNote, patterns, dueOn, perfect,
 } from './store.js';
 import { esc, checkSvg } from './fx.js';
 import { marked } from '../assets/vendor/marked.esm.js';
@@ -37,11 +38,14 @@ export function context() {
   return {
     today: k, weekday: DAY_NAMES[monIndex(k)], name: s.name || null, buddy: buddy().name, streak: streak(), bestStreak: bestStreak(),
     level: tt.level, xp: tt.xp, habitsDone: tt.done, perfectDays: tt.perfectDays, badges: unlocked(),
-    settings: s.settings, sleepLastNight: s.sleep[addDays(k, -1)] || null,
+    settings: s.settings, sleepLastNight: s.sleep[addDays(k, -1)] || null, streakFreezes: s.freezes, restDayToday: isRest(k),
+    timerRunning: s.timer ? { habit: s.timer.id, minutes: Math.round((Date.now() - s.timer.start) / 6000) / 10 } : null,
     habits: s.habits.map((h) => ({
-      id: h.id, name: h.name, icon: h.icon, time: h.time, goal: h.goal, step: h.step, unit: h.unit, kind: h.kind,
-      days: DAY_NAMES.filter((_, i) => h.days[i]), reminder: h.remind ? h.reminder : null, color: h.color,
-      today: { value: val(h, k), done: isDone(h, k), scheduled: habitsOn(k).includes(h) }, streak: habitStreak(h), rate30d: habitRate(h),
+      id: h.id, name: h.name, icon: h.icon, time: h.time, type: h.kind, goal: h.goal, step: h.step, unit: h.unit,
+      repeat: h.freq, ...(h.freq === 'days' ? { days: DAY_NAMES.filter((_, i) => h.days[i]) } : h.freq === 'interval' ? { everyDays: h.every } : { perWeek: h.perWeek, thisWeek: weekCount(h, k) }),
+      reminder: h.remind ? h.reminder : null, color: h.color,
+      today: isQuit(h) ? { slipped: !isDone(h, k), daysClean: daysClean(h) } : { value: val(h, k), done: isDone(h, k), scheduled: habitsOn(k).includes(h) },
+      note: noteOf(h, k), streak: habitStreak(h), rate30d: habitRate(h),
     })),
   };
 }
@@ -53,6 +57,10 @@ const num = (description) => ({ type: 'number', description });
 const bool = (description) => ({ type: 'boolean', description });
 const HABIT_FIELDS = {
   name: str('Short name, e.g. "Drink water"'),
+  type: str('count: check off or count up to a goal; amount: litres of water; timer: minutes with a start/stop timer; quit: a habit to break, counting days since the last slip', { enum: ['count', 'amount', 'timer', 'quit'] }),
+  repeat: str('days: on chosen weekdays; interval: every N days; weekly: N times a week on any days', { enum: ['days', 'interval', 'weekly'] }),
+  every: { type: 'integer', minimum: 2, maximum: 30, description: 'With repeat "interval": every this many days' },
+  per_week: { type: 'integer', minimum: 1, maximum: 6, description: 'With repeat "weekly": times per week' },
   icon: str('Icon id', { enum: ICONS }),
   time: str('Time of day', { enum: TIME_ORDER }),
   goal: num('Daily target in the unit, e.g. 2.5 (litres) or 20 (pages)'),
@@ -67,9 +75,16 @@ const TOOLS = [
   fn('add_habit', 'Create a new habit.', HABIT_FIELDS, ['name']),
   fn('update_habit', 'Change any fields of an existing habit (rename, goal, schedule, reminder, icon…).', { id: str('Habit id'), ...HABIT_FIELDS }, ['id']),
   fn('delete_habit', 'Delete a habit and its history. Only after the user has clearly asked for it.', { id: str('Habit id') }, ['id']),
-  fn('log_habit', 'Record progress on a habit for a day. Give exactly one of value, add or done.', {
-    id: str('Habit id'), date: DATE, value: num('Set the total for the day'), add: num('Add this much to the day'), done: bool('true marks it complete, false clears it'),
+  fn('log_habit', 'Record progress on a habit for a day. Give one of value, add, done or (quit habits) slip.', {
+    id: str('Habit id'), date: DATE, value: num('Set the total for the day (minutes for timers)'), add: num('Add this much to the day'),
+    done: bool('true marks it complete, false clears it'), slip: bool('Quit habits: true logs a slip that day, false removes it'),
   }, ['id']),
+  fn('timer', 'Start or stop the live timer of a timer habit (today only). Stopping logs the minutes.', { id: str('Habit id'), action: str('start or stop', { enum: ['start', 'stop'] }) }, ['id', 'action']),
+  fn('add_note', 'Save how a check-in felt: a mood from 1 (rough) to 5 (great) and/or a short note.', {
+    id: str('Habit id'), date: DATE, mood: { type: 'integer', minimum: 0, maximum: 5, description: '1 rough, 2 meh, 3 okay, 4 good, 5 great; 0 clears' }, text: str('Short note'),
+  }, ['id']),
+  fn('set_rest_day', 'Mark a day as a rest day (nothing due, streak safe) or undo it.', { date: DATE, rest: bool('true to rest, false to undo') }, ['rest']),
+  fn('get_patterns', 'Read the statistical patterns found in the user’s history (sleep, weekdays, habit pairs, mood).'),
   fn('log_sleep', 'Record hours slept on the night before the given day.', { hours: num('Hours slept, 3–12'), date: DATE }, ['hours']),
   fn('get_history', 'Read logged values for past days.', { days: { type: 'integer', minimum: 1, maximum: 60, description: 'How many days back, default 7' }, id: str('Only this habit') }),
   fn('update_settings', 'Change app settings.', {
@@ -90,8 +105,14 @@ function habitPatch(a) {
   if (a.goal > 0) p.goal = +a.goal;
   if (a.step > 0) p.step = +a.step;
   if (a.unit) p.unit = String(a.unit).slice(0, 12);
-  if (p.unit) p.kind = p.unit === 'L' ? 'amount' : 'count';      // litres get the water tank
+  if (['count', 'amount', 'timer', 'quit'].includes(a.type)) p.kind = a.type;
+  else if (p.unit) p.kind = p.unit === 'L' ? 'amount' : p.unit === 'min' && /meditat|workout|yoga|exercise|practice|focus|walk/i.test(a.name || '') ? 'timer' : 'count';
+  const defaults = { amount: { goal: 2.5, step: 0.25, unit: 'L' }, timer: { goal: 10, step: 5, unit: 'min' }, quit: { goal: 1, step: 1, unit: 'day', freq: 'days' } }[p.kind];
+  if (defaults) Object.entries(defaults).forEach(([k, v]) => { if (p[k] === undefined || (p.kind === 'quit' && k !== 'freq')) p[k] = v; });
   if (Array.isArray(a.days) && a.days.length) p.days = clampDays(a.days.map((d) => String(d).slice(0, 3).toLowerCase()));
+  if (['days', 'interval', 'weekly'].includes(a.repeat)) p.freq = a.repeat;
+  if (a.every >= 2) { p.every = Math.min(30, Math.round(a.every)); p.freq ||= 'interval'; }
+  if (a.per_week >= 1) { p.perWeek = Math.min(6, Math.round(a.per_week)); p.freq ||= 'weekly'; }
   if (a.reminder === 'off') p.remind = false;
   else if (/^\d{1,2}:\d{2}$/.test(a.reminder || '')) { p.reminder = a.reminder.padStart(5, '0'); p.remind = true; }
   if (Number.isInteger(a.color)) p.color = Math.abs(a.color) % COLORS.length;
@@ -108,7 +129,7 @@ function run(name, a, ops, out) {
     case 'add_habit': {
       const p = habitPatch(a);
       const h = { name: 'New habit', icon: 'seedling', unitIcon: 'seedling', color: s.habits.length % COLORS.length, time: 'morning', goal: 1, step: 1,
-        unit: 'times', kind: 'count', days: [1, 1, 1, 1, 1, 1, 1], reminder: '08:00', remind: false, ...p, id: 'h' + Date.now().toString(36) + s.habits.length, created: k };
+        unit: 'times', kind: 'count', freq: 'days', every: 2, perWeek: 3, days: [1, 1, 1, 1, 1, 1, 1], reminder: '08:00', remind: false, ...p, id: 'h' + Date.now().toString(36) + s.habits.length, created: k };
       if (h.step > h.goal) h.step = h.goal;
       s.habits.push(h); ops.changed(h.id); out.push(habitLink(h));
       return { ok: true, id: h.id };
@@ -130,10 +151,36 @@ function run(name, a, ops, out) {
     case 'log_habit': {
       const h = find(a.id); if (!h) return { error: 'No habit with that id' };
       const d = day(a.date);
+      if (isQuit(h)) {
+        const slipped = a.slip === true || (a.slip === undefined && a.done !== true && (a.value > 0 || a.add > 0));
+        ops.setValue(h, d, slipped ? 1 : 0);
+        return { ok: true, slipped, daysClean: daysClean(h) };
+      }
       const v = a.done === true ? h.goal : a.done === false ? 0 : a.add != null ? val(h, d) + +a.add : a.value != null ? +a.value : h.goal;
       ops.setValue(h, d, v);
       return { ok: true, value: val(h, d), goal: h.goal, done: isDone(h, d) };
     }
+    case 'timer': {
+      const h = find(a.id); if (!h) return { error: 'No habit with that id' };
+      if (h.kind !== 'timer') return { error: 'Not a timer habit' };
+      ops.timer(h, a.action);
+      return { ok: true };
+    }
+    case 'add_note': {
+      const h = find(a.id); if (!h) return { error: 'No habit with that id' };
+      const patch = {};
+      if (Number.isInteger(a.mood)) patch.mood = Math.max(0, Math.min(5, a.mood));
+      if (typeof a.text === 'string') patch.text = a.text.slice(0, 280);
+      setNote(h, day(a.date), patch); ops.changed(h.id); out.push(habitLink(h));
+      return { ok: true };
+    }
+    case 'set_rest_day': {
+      const d = day(a.date);
+      if (a.rest) s.rest[d] = true; else delete s.rest[d];
+      ops.changed();
+      return { ok: true };
+    }
+    case 'get_patterns': return patterns().map((f) => f.text.replace(/\*\*/g, ''));
     case 'log_sleep': {
       const hrs = Math.max(0, Math.min(14, +a.hours || 0));
       s.sleep[addDays(day(a.date), -1)] = Math.round(hrs * 2) / 2;
@@ -177,7 +224,8 @@ function run(name, a, ops, out) {
 
 function system() {
   const b = buddy().name;
-  return `You are ${b}, the friendly buddy inside Habie, a playful habit tracker on iPad. You can read and change everything in the app with tools: create, edit and delete habits, log progress or sleep for any past day, change settings, the theme, the user's name and buddy, and open screens.
+  return `You are ${b}, the friendly buddy inside Habie, a playful habit tracker on iPad. You can read and change everything in the app with tools: create, edit and delete habits (check-ins, litres, timers, quit habits; on weekdays, every few days or N times a week), log progress, slips or sleep for any past day, run timers, save moods and notes, set rest days, read patterns, change settings, the theme, the user's name and buddy, and open screens.
+- Streaks: rest days pause everything without breaking the streak. Every 7-day streak earns a freeze (max 3) that automatically saves the streak on a missed day.
 - Act, don't describe: when the user asks for a change, call the tools right away, then confirm in one short sentence. Combine several tool calls in one turn when useful.
 - When the user mentions doing something ("I drank a glass of water", "read 10 pages"), log it on the matching habit. A glass of water is 0.25 L.
 - Pick fitting icons, units, steps and times when creating habits. Keep goals small and realistic.
@@ -224,13 +272,13 @@ export async function format(text) {
   return html;
 }
 
-async function call(model, messages, key) {
+async function call(model, messages, key, tools = TOOLS) {
   const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 45000);
   try {
     const res = await fetch(`${CONFIG.apiBase}/chat/completions`, {
       method: 'POST', signal: ctl.signal,
       headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model, messages, tools: TOOLS, tool_choice: 'auto', temperature: 0.4, max_tokens: 600 }),
+      body: JSON.stringify({ model, messages, ...(tools ? { tools, tool_choice: 'auto' } : {}), temperature: 0.4, max_tokens: 600 }),
     });
     if (!res.ok) { const e = new Error(String(res.status)); e.status = res.status; throw e; }
     const data = await res.json();
@@ -270,6 +318,26 @@ async function agent(text, img, ops) {
     messages[0].content = system();                                // refreshed so the next round sees the changes
   }
   return { from: 'bot', text: 'All done!', actions: actions.slice(-3) };
+}
+
+// The Insights card's write-up: the buddy explains the patterns and suggests one small change each.
+export async function writeInsights(found) {
+  const key = getKey(); if (!key) throw new Error('no key');
+  const k = todayKey(), s = store.state;
+  const days = Array.from({ length: 28 }, (_, i) => addDays(k, -i - 1)).reverse().map((d) => {
+    const st = dayStats(d);
+    return { date: d, weekday: DAY_NAMES[monIndex(d)], done: st.done, due: st.total, sleep: s.sleep[addDays(d, -1)] || null, rest: isRest(d) || undefined };
+  }).filter((d) => d.due || d.rest);
+  const data = { patterns: found.map((f) => f.text.replace(/\*\*/g, '')), days, habits: context().habits.map(({ name, type, repeat, streak, rate30d }) => ({ name, type, repeat, streak, rate30d })), streak: streak(), freezes: s.freezes };
+  const messages = [
+    { role: 'system', content: `You are ${buddy().name}, the warm habit buddy in Habie. From the user's real statistics, write 3 short bullets. Each names a pattern, its likely cause, and one tiny, concrete thing to try. Use only numbers present in the data. Bold the key number in each. No heading, no intro or outro, under 90 words.` },
+    { role: 'user', content: JSON.stringify(data) },
+  ];
+  let lastErr;
+  for (const model of CONFIG.models) {
+    try { const msg = await call(model, messages, key, null); return await format(msg.content || ''); } catch (e) { lastErr = e; if (e.status === 401 || e.status === 403) break; }
+  }
+  throw lastErr || new Error('failed');
 }
 
 export async function reply(text, img, ops) {

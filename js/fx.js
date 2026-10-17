@@ -14,10 +14,12 @@ export function countTo(el, to, decimals = 0, suffix = '') {
   if (!el) return;
   const from = parseFloat(el.dataset.v || '0');
   el.dataset.v = to;
+  const run = (el._count = (el._count || 0) + 1);          // a newer count on the same element wins
   const fmt = (v) => String(decimals ? Math.round(v * 10 ** decimals) / 10 ** decimals : Math.round(v));
-  if (REDUCED || from === to) { el.textContent = fmt(to) + suffix; return; }
+  if (REDUCED || from === to || Number.isNaN(from)) { el.textContent = fmt(to) + suffix; return; }
   const start = performance.now(), dur = 750;
   const step = (t) => {
+    if (el._count !== run) return;
     const p = Math.min(1, (t - start) / dur), e = 1 - Math.pow(1 - p, 3);
     el.textContent = fmt(from + (to - from) * e) + suffix;
     if (p < 1) requestAnimationFrame(step);

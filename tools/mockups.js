@@ -1,6 +1,7 @@
-// Captures the README screenshots and screen recordings from the running app.
+// Captures the README screenshots and screen recordings from the running app, using the demo garden (?demo).
 //   python3 -m http.server 8765 &      (from the repo root)
 //   node tools/mockups.js [out-dir] [base-url]
+// PW_CHANNEL=chrome uses the installed Google Chrome instead of Playwright's own browser; ONLY=a,b limits the run.
 // Then frame them with: python3 tools/frame.py [out-dir]
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -13,34 +14,62 @@ fs.mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function open(page, hash, setup) {
   await page.goto(`${BASE}?mockup&reset&demo${hash}`);
-  await sleep(600);
+  await page.waitForFunction(() => localStorage.getItem('habie.v3'));
+  await sleep(300);
   if (setup) {
     await page.evaluate(setup);
+    await sleep(300);
     await page.goto(`${BASE}?mockup&demo${hash}`);
   }
   await sleep(1600);
 }
-const theme = (dark, accent) => `(() => { const s = JSON.parse(localStorage.getItem('habie.v3')); s.settings.dark = ${dark}; s.settings.accent = '${accent}'; localStorage.setItem('habie.v3', JSON.stringify(s)); })()`;
+// Edits the saved demo state in the page, then reloads so the app picks it up.
+const edit = (body) => `(() => { const s = JSON.parse(localStorage.getItem('habie.v3')); ${body}; localStorage.setItem('habie.v3', JSON.stringify(s)); })()`;
+const theme = (dark, accent) => edit(`s.settings.dark = ${dark}; s.settings.accent = '${accent}'`);
+const today = `(() => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); })()`;
+// Everything due today done except the water, so five taps finish a perfect day.
+const almostPerfect = edit(`const t = ${today}; Object.assign(s.log[t], { workout: 30, journal: 1, plants: 1 })`);
+const scrollTo = (sel) => async (p) => { await p.evaluate((q) => document.querySelector(q).scrollIntoView({ block: 'start' }), sel); await sleep(900); };
+// A demo conversation, rendered by the app's own Markdown + LaTeX pipeline.
+async function stagedChat(p) {
+  await p.evaluate(async () => {
+    const { format } = await import('./js/chat.js');
+    const reply = await format("Done! I set up **Read** for 20 pages on weekdays at 9 pm and logged tonight's 12 pages.\n\nAbout your sleep:\n- After **7h+** you finish **95%** of your habits\n- After shorter nights it drops to **55%**\n\nThat's a $\\Delta \\approx 40$ point swing, so an earlier bedtime is your best lever.");
+    const s = JSON.parse(localStorage.getItem('habie.v3'));
+    s.chat = [
+      { from: 'me', text: 'Add a reading habit, 20 pages on weekdays at 9pm. I read 12 pages tonight. Also, does sleep affect me?' },
+      { from: 'bot', md: true, text: reply, actions: [{ label: 'Open Read', href: '#habits/read' }, { label: 'See sleep', href: '#insights' }] },
+    ];
+    localStorage.setItem('habie.v3', JSON.stringify(s));
+  });
+  await p.goto(`${BASE}?mockup&demo#buddy`);
+  await sleep(1800);
+}
 
 const shots = {
   today: async (p) => open(p, '#home'),
   insights: async (p) => open(p, '#insights'),
+  patterns: async (p) => { await open(p, '#insights'); await scrollTo('.sleep-card')(p); },
   habits: async (p) => open(p, '#habits/water'),
-  buddy: async (p) => {
-    await open(p, '#buddy');
-    await p.click('.sug[data-say=schedule]'); await sleep(1800);
-    await p.fill('#ask-input', 'How much water have I had today?'); await p.keyboard.press('Enter'); await sleep(1900);
+  timer: async (p) => {
+    await open(p, '#habits/workout');
+    await p.evaluate(() => document.querySelector('.timer-go').click()); await sleep(400);
+    await p.evaluate(async () => { const { store } = await import('./js/store.js'); store.state.timer.start -= 18.5 * 60000; store.state.timer.cheered = true; });
+    await sleep(1600);
   },
+  quit: async (p) => { await open(p, '#habits/sugar'); await p.evaluate(() => { document.querySelector('#detail').scrollTop = 0; }); },
+  notes: async (p) => { await open(p, '#habits/journal'); await p.evaluate(() => document.querySelector('.d-notes').scrollIntoView({ block: 'center' })); await sleep(900); },
+  buddy: async (p) => { await open(p, '#home'); await stagedChat(p); },
   settings: async (p) => open(p, '#settings'),
   editor: async (p) => {
     await open(p, '#habits');
-    await p.keyboard.press('Meta+n'); await sleep(500);
-    await p.click('[data-idea="4"]'); await p.click('[data-step="1"]'); await sleep(900);
+    await p.click('.side-new'); await sleep(600);
+    await p.click('[data-idea="4"]'); await p.click('[data-type="timer"]'); await p.click('[data-freq="weekly"]');
+    await p.click('[data-step="1"]'); await p.click('[data-step="1"]');
+    await p.evaluate(() => { document.querySelector('.editor-body').scrollTop = 0; }); await sleep(900);
   },
   perfect: async (p) => {
-    await open(p, '#home');
-    for (let i = 0; i < 3; i++) { await p.click('[data-route=home] .habit [data-step-habit=workout]'); await sleep(200); }
-    await p.click('[data-route=home] .habit [data-step-habit=journal]'); await sleep(200);
+    await open(p, '#home', almostPerfect);
     for (let i = 0; i < 5; i++) { await p.click('[data-route=home] .habit [data-step-habit=water]'); await sleep(150); }
     await sleep(1500);
   },
@@ -51,9 +80,11 @@ const shots = {
 
 const reels = {
   day: async (p) => {
-    await open(p, '#home');
-    for (let i = 0; i < 3; i++) { await p.click('[data-route=home] .habit [data-step-habit=workout]'); await sleep(550); }
-    await sleep(900);
+    await open(p, '#home', edit(`const t = ${today}; Object.assign(s.log[t], { plants: 1 })`));
+    await p.click('[data-route=home] .habit [data-timer=workout]'); await sleep(1600);
+    await p.evaluate(async () => { const { store } = await import('./js/store.js'); store.state.timer.start -= 30 * 60000; });
+    await sleep(2400);
+    await p.click('[data-route=home] .habit [data-timer=workout]'); await sleep(1400);
     await p.click('[data-route=home] .habit [data-step-habit=journal]'); await sleep(1200);
     for (let i = 0; i < 5; i++) { await p.click('[data-route=home] .habit [data-step-habit=water]'); await sleep(380); }
     await sleep(3200);
@@ -69,16 +100,18 @@ const reels = {
     await p.click('#habit-list .li[href="#habits/read"]'); await sleep(1300);
     await p.click('[data-unit="3"]'); await sleep(900);
     await p.click('[data-unit="3"]'); await sleep(900);
+    await p.click('[data-mood="5"]'); await sleep(1000);
     await p.click('.wday[data-day-pick]:not(.sel):not(.future)'); await sleep(1600);
     await p.click('[data-action=back-today]'); await sleep(1400);
   },
   create: async (p) => {
     await open(p, '#habits');
-    await p.keyboard.press('Meta+n'); await sleep(1100);
+    await p.click('.side-new'); await sleep(1100);
     await p.click('[data-idea="0"]'); await sleep(700);
+    await p.click('[data-type="timer"]'); await sleep(700);
     await p.click('[data-color="3"]'); await sleep(500);
     await p.click('[data-time="evening"]'); await sleep(500);
-    await p.click('[data-dayi="5"]'); await sleep(250); await p.click('[data-dayi="6"]'); await sleep(500);
+    await p.click('[data-freq="weekly"]'); await sleep(600);
     await p.click('[data-step="1"]'); await sleep(350); await p.click('[data-step="1"]'); await sleep(700);
     await p.click('#n-save'); await sleep(3000);
   },
@@ -97,10 +130,10 @@ const reels = {
 
 (async () => {
   const only = process.env.ONLY ? process.env.ONLY.split(',') : null;
-  const b = await chromium.launch();
+  const b = await chromium.launch(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {});
   for (const [name, run] of Object.entries(shots)) {
     if (only && !only.includes(name)) continue;
-    const ctx = await b.newContext({ viewport: VIEW, deviceScaleFactor: 2 });
+    const ctx = await b.newContext({ viewport: VIEW, deviceScaleFactor: 2, colorScheme: 'light', serviceWorkers: 'block' });
     const p = await ctx.newPage();
     await run(p);
     await p.screenshot({ path: path.join(OUT, `${name}.png`) });
@@ -109,7 +142,7 @@ const reels = {
   }
   for (const [name, run] of Object.entries(reels)) {
     if (only && !only.includes(name)) continue;
-    const ctx = await b.newContext({ viewport: VIEW, deviceScaleFactor: 1, recordVideo: { dir: OUT, size: VIEW } });
+    const ctx = await b.newContext({ viewport: VIEW, deviceScaleFactor: 1, colorScheme: 'light', serviceWorkers: 'block', recordVideo: { dir: OUT, size: VIEW } });
     const p = await ctx.newPage();
     await run(p);
     const video = p.video();

@@ -45,8 +45,7 @@ jobs:
       - name: Collect the site
         run: |
           mkdir _site
-          cp -R index.html styles.css config.js manifest.webmanifest sw.js js assets _site/
-          [ -d docs ] && cp -R docs _site/ || true
+          cp -R index.html styles.css config.js manifest.webmanifest favicon.ico sw.js js assets _site/
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

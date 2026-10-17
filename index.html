@@ -3,11 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Habie</title>
-<meta name="description" content="A playful habit tracker for iPad. Grow a garden of small habits.">
+<title>Habie · Habit tracker for iPad</title>
+<meta name="description" content="Habie is a playful habit tracker for iPad. Grow a garden of small habits with timers, quit counters, streak freezes, insights and an AI buddy who can set everything up for you.">
+<meta name="application-name" content="Habie">
+<meta name="author" content="Abhinav Prabhakar">
+<meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#7372c8">
+<meta name="format-detection" content="telephone=no">
+<link rel="canonical" href="https://abhinav-prabhakar.github.io/Habie/">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+<!-- link previews -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Habie">
+<meta property="og:title" content="Habie · Habit tracker for iPad">
+<meta property="og:description" content="Grow a garden of small habits. Timers, quit counters, streak freezes, patterns and an AI buddy, in a playful iPad app that works offline.">
+<meta property="og:url" content="https://abhinav-prabhakar.github.io/Habie/">
+<meta property="og:image" content="https://abhinav-prabhakar.github.io/Habie/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Habie's Today screen on an iPad">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Habie · Habit tracker for iPad">
+<meta name="twitter:description" content="Grow a garden of small habits, with an AI buddy who can set everything up for you.">
+<meta name="twitter:image" content="https://abhinav-prabhakar.github.io/Habie/assets/og.png">
 <!-- iPadOS home-screen app -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -193,6 +215,11 @@
             <span class="lv-label" id="lv-label"></span>
           </a>
 
+          <div class="card patterns-card reveal">
+            <div class="card-head"><h3><img src="assets/3d/crystal-ball.png" alt="">Patterns</h3><button class="chip-btn" id="patterns-ask" data-action="ask-insights" hidden><img src="assets/3d/sparkles.png" alt=""><span>Ask</span></button></div>
+            <div id="patterns"></div>
+          </div>
+
           <div class="card matrix-card reveal">
             <div class="card-head"><h3>Last 14 days</h3><button class="chip-btn" data-action="sort"><svg width="18" height="18" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M3 13h12M3 19h8M15.5 19.5l3 3 6-6.5"/></svg><span id="sort-label">By time of day</span></button></div>
             <div class="matrix" id="matrix"></div>
@@ -266,13 +293,21 @@
 
             <div class="card d-today">
               <div class="card-head"><h3 id="d-day-label">Today</h3><span id="d-count"></span></div>
+              <div class="d-special" id="d-special"></div>
               <div class="units" id="d-units"></div>
               <div class="amounts" id="d-amounts"></div>
               <button class="d-log" id="d-log" data-action="log"></button>
             </div>
 
+            <div class="card d-notes">
+              <div class="card-head"><h3>How did it feel?</h3><span id="d-note-day"></span></div>
+              <div class="moods" id="d-moods"></div>
+              <textarea id="d-note" class="d-note" rows="2" maxlength="280" placeholder="Add a note for this day…" aria-label="Note"></textarea>
+              <div class="note-list" id="d-note-list"></div>
+            </div>
+
             <div class="d-stats">
-              <div class="stat-tile"><img src="assets/3d/fire.png" alt=""><b id="d-streak">0</b><span>day streak</span></div>
+              <div class="stat-tile"><img src="assets/3d/fire.png" alt=""><b id="d-streak">0</b><span id="d-streak-l">day streak</span></div>
               <div class="stat-tile"><img src="assets/3d/trophy.png" alt=""><b id="d-best">0</b><span>best streak</span></div>
               <div class="stat-tile"><img src="assets/3d/chart-increasing.png" alt=""><b id="d-rate">0%</b><span>last 30 days</span></div>
             </div>
@@ -447,6 +482,14 @@
           <div class="n-icons" id="n-icons"></div>
         </div>
         <div class="ed-col">
+          <h4>Type</h4>
+          <div class="segm n-types" id="n-types">
+            <button data-type="count"><img src="assets/3d/check-mark-button.png" alt="">Check-in</button>
+            <button data-type="amount"><img src="assets/3d/droplet.png" alt="">Litres</button>
+            <button data-type="timer"><img src="assets/3d/timer-clock.png" alt="">Timer</button>
+            <button data-type="quit"><img src="assets/3d/prohibited.png" alt="">Quit</button>
+          </div>
+          <p class="n-type-hint" id="n-type-hint"></p>
           <h4>Colour</h4>
           <div class="n-colors" id="n-colors"></div>
           <h4>Time of day</h4>
@@ -455,10 +498,22 @@
             <button class="time-opt" data-time="afternoon"><img src="assets/3d/sun.png" alt=""><span>Afternoon</span></button>
             <button class="time-opt" data-time="evening"><img src="assets/3d/crescent-moon.png" alt=""><span>Evening</span></button>
           </div>
-          <h4>Repeat</h4>
-          <div class="n-days" id="n-days"></div>
-          <h4>Daily goal</h4>
-          <div class="n-goal">
+          <div id="n-repeat-wrap">
+            <h4>Repeat</h4>
+            <div class="segm n-freqs" id="n-freqs">
+              <button data-freq="days">On days</button>
+              <button data-freq="interval">Every few days</button>
+              <button data-freq="weekly">Times a week</button>
+            </div>
+            <div class="n-days" id="n-days"></div>
+            <div class="n-goal n-freq-step" id="n-freq-step">
+              <button class="step" data-freq-step="-1" aria-label="Less"><svg width="18" height="18" viewBox="0 0 20 20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 10h12"/></svg></button>
+              <div class="goal-mid"><b id="n-freq-label"></b></div>
+              <button class="step" data-freq-step="1" aria-label="More"><svg width="18" height="18" viewBox="0 0 20 20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg></button>
+            </div>
+          </div>
+          <h4 id="n-goal-h">Daily goal</h4>
+          <div class="n-goal" id="n-goal-row">
             <button class="step" data-step="-1" aria-label="Less"><svg width="18" height="18" viewBox="0 0 20 20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 10h12"/></svg></button>
             <div class="goal-mid"><b id="n-goal"></b><span class="goal-pips" id="n-goal-pips"></span></div>
             <button class="step" data-step="1" aria-label="More"><svg width="18" height="18" viewBox="0 0 20 20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg></button>

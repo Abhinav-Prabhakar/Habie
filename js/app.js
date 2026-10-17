@@ -6,7 +6,7 @@ import {
   streak, bestStreak, habitStreak, habitBest, habitRate, totals, unlocked, progressText,
 } from './store.js';
 import { $, $$, esc, checkSvg, view, REDUCED, countTo, ring, stagePoint, confetti, rain, toast, sound, buzz } from './fx.js';
-import { reply, CHIP_TEXT } from './chat.js';
+import { reply, CHIP_TEXT, getKey, ownKey, setKey, hasDeployedKey } from './chat.js';
 import { initPWA, installState, promptInstall } from './pwa.js';
 
 const S = () => store.state;
@@ -373,12 +373,21 @@ function renderChat(animateLast) {
   const sc = $('#convo-scroll');
   requestAnimationFrame(() => sc.scrollTo({ top: sc.scrollHeight, behavior: REDUCED ? 'auto' : 'smooth' }));
 }
+// What the buddy's tools call, so its changes celebrate and re-render exactly like taps.
+const chatOps = {
+  setValue: (h, k, v) => setValue(h, k, v),
+  changed: (id) => { if (id) { selId = id; lastChange = { id, at: performance.now() }; } save(); renderAll(); renderBuddy(); },
+  theme: applyTheme,
+  setReminders,
+  go: (hash) => { location.hash = hash; },
+  reset: () => { const s = S(); store.state = blankState({ name: s.name, buddy: s.buddy, settings: s.settings, installDismissed: s.installDismissed, chat: s.chat }); selId = null; save(); renderAll(); },
+};
 async function userSays(text, img) {
   S().chat.push({ from: 'me', text: text ? esc(text) : '', img });
   S().chat.push({ typing: true });
   renderChat(true); sound('tap');
   $('#bp-status').textContent = `${buddy().name} is typing…`;
-  const msg = await reply(text, img);
+  const msg = await reply(text, img, chatOps);
   S().chat = S().chat.filter((m) => !m.typing);
   S().chat.push(msg);
   $('#bp-status').textContent = 'Your little habit buddy';
@@ -413,6 +422,7 @@ function renderSettings() {
   $('#pref-theme-sub').textContent = ACCENTS[S().settings.accent];
   $('#pref-dark-sub').textContent = S().settings.dark ? 'On' : 'Off';
   $('#pref-reminders-sub').textContent = S().settings.reminders ? `${S().habits.filter((h) => h.remind).length} active · while Habie is open` : 'Off';
+  $('#brain-sub').textContent = ownKey() ? 'Smart · your own key' : hasDeployedKey() ? 'Smart · can change anything' : 'Simple · add an API key';
   const inst = installState();
   $('#install-sub').textContent = inst.installed ? 'Installed' : inst.canPrompt ? 'One tap to install' : 'Add it to your Home Screen';
 }
@@ -877,6 +887,21 @@ document.addEventListener('click', (e) => {
       selId = null; save(); closeOverlays(); renderAll(); location.hash = '#home';
       toast('A fresh garden. Let’s grow!', 'seedling'); break;
     }
+    case 'api-key':
+      openDialog(`<div class="sh-hero"><img class="sh-big" src="${ICON('brain')}" alt=""></div>
+        <h3 class="sh-title">Buddy brain</h3>
+        <p class="sh-sub">${getKey() ? `${buddy().name} uses an AI model and can set up, log and change anything you ask.` : `Paste an OpenAI-compatible API key so ${buddy().name} can set up, log and change anything you ask.`}
+        ${hasDeployedKey() ? ' This copy of Habie already has a key built in. A key you paste here is used instead.' : ''} It stays on this iPad only.</p>
+        <input id="key-input" class="sh-input" type="password" autocomplete="off" spellcheck="false" placeholder="${ownKey() ? 'Your key is saved' : 'sk-…'}" aria-label="API key">
+        <div class="sh-pair">${ownKey() ? '<button class="sh-btn ghost" data-action="remove-key">Remove key</button>' : '<button class="sh-btn ghost" data-action="close">Cancel</button>'}<button class="sh-btn" data-action="save-key">Save</button></div>`);
+      setTimeout(() => $('#key-input').focus({ preventScroll: true }), 300);
+      break;
+    case 'save-key': {
+      const k = $('#key-input').value.trim();
+      if (k) { setKey(k); toast(`${buddy().name} got smarter`, 'brain'); }
+      closeOverlays(); renderSettings(); break;
+    }
+    case 'remove-key': setKey(''); closeOverlays(); renderSettings(); toast('Key removed', 'key'); break;
     case 'clear-chat': S().chat = []; save(); renderChat(false); break;
     case 'install': $('#install-banner').classList.remove('open'); openInstall(); break;
     case 'dismiss-install': S().installDismissed = true; save(); $('#install-banner').classList.remove('open'); break;

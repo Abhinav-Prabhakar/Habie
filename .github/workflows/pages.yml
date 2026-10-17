@@ -1,0 +1,54 @@
+# Deploys Habie to GitHub Pages. The buddy's API key lives in the VOIDAI_API_KEY repository
+# secret and is written into config.js only in the deployed copy, never in the repo.
+name: Deploy to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add the API key to config.js
+        env:
+          VOIDAI_API_KEY: ${{ secrets.VOIDAI_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import base64, os, pathlib
+          key = os.environ.get('VOIDAI_API_KEY', '').strip()
+          if not key:
+              print('::warning::VOIDAI_API_KEY is not set; the buddy will use its offline replies.')
+              raise SystemExit
+          p = pathlib.Path('config.js')
+          src = p.read_text()
+          enc = base64.b64encode(key[::-1].encode()).decode()
+          assert "apiKeyEncoded: ''" in src, 'placeholder missing from config.js'
+          p.write_text(src.replace("apiKeyEncoded: ''", f"apiKeyEncoded: '{enc}'", 1))
+          PY
+
+      - name: Collect the site
+        run: |
+          mkdir _site
+          cp -R index.html styles.css config.js manifest.webmanifest sw.js js assets _site/
+          [ -d docs ] && cp -R docs _site/ || true
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+      - id: deployment
+        uses: actions/deploy-pages@v4

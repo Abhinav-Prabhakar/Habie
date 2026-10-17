@@ -799,6 +799,8 @@ a.mx-row:hover { background: var(--surface-3); }
 .sh-btn.danger { background: #e0455a; color: #fff; }
 .sh-btn img { width: 30px; }
 .sh-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sh-input { width: 100%; height: 56px; margin-top: 20px; padding: 0 20px; border-radius: 18px; border: 0; background: var(--surface-2); color: var(--ink); font: 500 17px "Roboto"; outline: none; box-shadow: inset 0 0 0 2px transparent; transition: box-shadow .2s; }
+.sh-input:focus { box-shadow: inset 0 0 0 2px var(--a); }
 .sh-row { display: flex; align-items: center; gap: 14px; width: 100%; height: 64px; padding: 0 14px; border-radius: 20px; font-weight: 800; font-size: 17px; text-align: left; transition: background .2s; }
 .sh-row img { width: 34px; }
 .sh-row:hover { background: var(--surface-2); }
